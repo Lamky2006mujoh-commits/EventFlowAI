@@ -34,8 +34,10 @@ import {
   type BriefData,
   type Workspace,
 } from "../supabase/functions/_shared/contracts";
-import { api, configurationError, liveMode } from "./lib/api";
-import { demoPeople } from "./lib/demo";
+import { api, liveMode, SessionExpiredError } from "./lib/api";
+import AuthScreen from "./components/AuthScreen";
+import MemberForm from "./components/MemberForm";
+import VersionChanges from "./components/VersionChanges";
 import "./App.css";
 
 type Page = "overview" | "briefs" | "members" | "form" | "detail" | "guide";
@@ -57,6 +59,8 @@ const timestamp = (s: string) =>
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
+    year: "numeric",
   });
 const initials = (s: string) =>
   s
@@ -136,162 +140,6 @@ function Status({ brief }: { brief: Brief }) {
     </span>
   );
 }
-function Login({
-  onLogin,
-  busy,
-  error,
-}: {
-  onLogin: (email: string, password: string, persona: string) => void;
-  busy: boolean;
-  error: string;
-}) {
-  const [persona, setPersona] = useState(demoPeople[0].id);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  return (
-    <div className="login-page">
-      <section className="login-story">
-        <div className="brand">
-          <span className="brand-icon">
-            <Leaf size={23} />
-          </span>
-          eventflow<span className="brand-ai">AI</span>
-        </div>
-        <div className="login-copy">
-          <span className="eyebrow">
-            A LITTLE STRUCTURE. A LOT OF POSSIBILITY.
-          </span>
-          <h1>
-            Great events
-            <br />
-            start with
-            <br />
-            <em>a clear brief.</em>
-          </h1>
-          <p>
-            Bring the details together. Give your team the space to make
-            something extraordinary.
-          </p>
-          <div className="illustration">
-            <div className="illustration-top">
-              <span className="illustration-symbol">
-                <Sparkles size={26} />
-              </span>
-              <span className="badge green">
-                <Check size={12} />
-                All in one place
-              </span>
-            </div>
-            <div className="illustration-line long" />
-            <div className="illustration-line" />
-            <div className="illustration-grid">
-              <div>
-                <CalendarDays />
-                <span>The when</span>
-              </div>
-              <div>
-                <Users />
-                <span>The who</span>
-              </div>
-              <div>
-                <MapPin />
-                <span>The where</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <span className="login-foot">
-          From the first idea to the final detail.
-        </span>
-      </section>
-      <section className="login-panel">
-        <div className="login-form">
-          <span className="badge neutral">SPRINT 02 · AGENCY WORKSPACE</span>
-          <h2>
-            Your next great event
-            <br />
-            starts here.
-          </h2>
-          <p className="muted">
-            {liveMode
-              ? "Sign in to your agency workspace."
-              : "Explore the course demo with a sample agency account."}
-          </p>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              onLogin(email, password, persona);
-            }}
-          >
-            {liveMode ? (
-              <>
-                <Field label="Email">
-                  <input
-                    type="email"
-                    autoComplete="username"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </Field>
-                <Field label="Password">
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </Field>
-              </>
-            ) : (
-              <Field label="Demo account">
-                <select
-                  value={persona}
-                  onChange={(e) => setPersona(e.target.value)}
-                >
-                  {demoPeople.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} · {p.agencyName} · {p.role}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            )}
-            {(error || configurationError) && (
-              <p className="error" role="alert">
-                {error || configurationError}
-              </p>
-            )}
-            <Button
-              type="submit"
-              disabled={busy || Boolean(configurationError)}
-            >
-              {busy ? (
-                <LoaderCircle className="spin" size={17} />
-              ) : (
-                <ArrowRight size={17} />
-              )}
-              {liveMode ? "Sign in" : "Enter demo workspace"}
-            </Button>
-          </form>
-          <div className="login-note">
-            <ShieldCheck size={20} />
-            <p>
-              {liveMode
-                ? "Your agency’s briefs stay in your agency workspace. Ask your administrator if you need access."
-                : "Local demo · simulated sign-in. Sample briefs stay in this browser. Choose another agency account to explore separate workspaces."}
-            </p>
-          </div>
-        </div>
-        <span className="login-panel-foot">
-          Made for people who bring people together.
-        </span>
-      </section>
-    </div>
-  );
-}
-
 function BriefForm({
   brief,
   onSave,
@@ -509,8 +357,17 @@ export default function App() {
   const [version, setVersion] = useState<number | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const [deleteText, setDeleteText] = useState("");
+  const [removeMemberId, setRemoveMemberId] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
+    const unsubscribe = api.onSessionEnd(() => {
+      if (active) {
+        setWorkspace(null);
+        setSelectedId(null);
+        setPage("overview");
+        setNotice("");
+      }
+    });
     void (async () => {
       try {
         const restored = await api.restore();
@@ -531,6 +388,7 @@ export default function App() {
     })();
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
   async function run(action: () => Promise<void>) {
@@ -540,6 +398,11 @@ export default function App() {
     try {
       await action();
     } catch (e) {
+      if (e instanceof SessionExpiredError) {
+        setWorkspace(null);
+        setSelectedId(null);
+        setPage("overview");
+      }
       setError(
         e instanceof Error
           ? e.message
@@ -563,9 +426,18 @@ export default function App() {
   }
   if (!workspace)
     return (
-      <Login
+      <AuthScreen
         busy={busy}
         error={error}
+        notice={notice}
+        onRegister={async (name, email, password) => {
+          await run(async () => {
+            await api.register(name, email, password);
+            setNotice(
+              "If your registration was accepted, confirm your email, then ask your agency administrator for access. You can then sign in here.",
+            );
+          });
+        }}
         onLogin={(email, password, persona) => {
           void run(async () => {
             setWorkspace(await api.login(email, password, persona));
@@ -1118,6 +990,10 @@ export default function App() {
                     </p>
                   </div>
                 )}
+                <VersionChanges
+                  brief={selected}
+                  version={viewing?.version ?? selected.version}
+                />
                 <div className="detail-footer">
                   <span className="muted">
                     Saved by {viewing?.author ?? selected.author} ·{" "}
@@ -1132,61 +1008,67 @@ export default function App() {
                     Edit current brief
                   </Button>
                 </div>
-                <div className="delete-area">
-                  {deletePending ? (
-                    <>
-                      <p>
-                        Delete this brief and all {selected.history.length}{" "}
-                        saved versions? Type <strong>DELETE</strong> to confirm.
-                      </p>
-                      <label className="sr-only" htmlFor="delete-confirmation">
-                        Type DELETE to confirm deletion
-                      </label>
-                      <input
-                        id="delete-confirmation"
-                        value={deleteText}
-                        onChange={(e) => setDeleteText(e.target.value)}
-                        placeholder="DELETE"
-                      />
-                      <button
-                        className="danger-button"
-                        disabled={busy || deleteText !== "DELETE"}
-                        onClick={() => {
-                          void run(async () => {
-                            await api.remove(selected.id);
-                            await refresh();
-                            setPage("briefs");
-                            setSelectedId(null);
+                {session.role === "admin" && (
+                  <div className="delete-area">
+                    {deletePending ? (
+                      <>
+                        <p>
+                          Delete this brief and all {selected.history.length}{" "}
+                          saved versions? Type <strong>DELETE</strong> to
+                          confirm.
+                        </p>
+                        <label
+                          className="sr-only"
+                          htmlFor="delete-confirmation"
+                        >
+                          Type DELETE to confirm deletion
+                        </label>
+                        <input
+                          id="delete-confirmation"
+                          value={deleteText}
+                          onChange={(e) => setDeleteText(e.target.value)}
+                          placeholder="DELETE"
+                        />
+                        <button
+                          className="danger-button"
+                          disabled={busy || deleteText !== "DELETE"}
+                          onClick={() => {
+                            void run(async () => {
+                              await api.remove(selected.id);
+                              await refresh();
+                              setPage("briefs");
+                              setSelectedId(null);
+                              setDeletePending(false);
+                              setDeleteText("");
+                              setNotice("Brief and version history deleted.");
+                            });
+                          }}
+                        >
+                          Delete permanently
+                        </button>
+                        <button
+                          className="text-button"
+                          disabled={busy}
+                          onClick={() => {
                             setDeletePending(false);
                             setDeleteText("");
-                            setNotice("Brief and version history deleted.");
-                          });
-                        }}
-                      >
-                        Delete permanently
-                      </button>
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
                       <button
-                        className="text-button"
+                        className="text-button muted"
                         disabled={busy}
-                        onClick={() => {
-                          setDeletePending(false);
-                          setDeleteText("");
-                        }}
+                        onClick={() => setDeletePending(true)}
                       >
-                        Cancel
+                        <Trash2 size={14} />
+                        Delete brief
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      className="text-button muted"
-                      disabled={busy}
-                      onClick={() => setDeletePending(true)}
-                    >
-                      <Trash2 size={14} />
-                      Delete brief
-                    </button>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </section>
               <aside>
                 <div className="panel readiness-panel">
@@ -1259,6 +1141,23 @@ export default function App() {
                   </p>
                 </div>
               </div>
+              {session.role === "admin" && liveMode && (
+                <MemberForm
+                  busy={busy}
+                  onAdd={async (email, name) => {
+                    let saved = false;
+                    await run(async () => {
+                      await api.addMember(email, name, "member");
+                      await refresh();
+                      setNotice(
+                        `${name} was added to your agency as a member.`,
+                      );
+                      saved = true;
+                    });
+                    return saved;
+                  }}
+                />
+              )}
               <section className="panel table-scroll">
                 <table>
                   <thead>
@@ -1266,6 +1165,7 @@ export default function App() {
                       <th>TEAM MEMBER</th>
                       <th>AGENCY</th>
                       <th>ROLE</th>
+                      {session.role === "admin" && liveMode && <th>ACCESS</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1305,6 +1205,46 @@ export default function App() {
                             <option value="member">Member</option>
                           </select>
                         </td>
+                        {session.role === "admin" && liveMode && (
+                          <td>
+                            {removeMemberId === member.id ? (
+                              <div className="member-remove">
+                                <span>Remove agency access?</span>
+                                <button
+                                  className="danger-button"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    void run(async () => {
+                                      await api.removeMember(member.id);
+                                      setRemoveMemberId(null);
+                                      await refresh();
+                                      setNotice(
+                                        `${member.name} no longer has access to this agency.`,
+                                      );
+                                    });
+                                  }}
+                                >
+                                  Confirm removal
+                                </button>
+                                <button
+                                  className="text-button"
+                                  onClick={() => setRemoveMemberId(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                className="text-button"
+                                disabled={busy || member.id === session.id}
+                                onClick={() => setRemoveMemberId(member.id)}
+                                aria-label={`Remove ${member.name}`}
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -1333,8 +1273,9 @@ export default function App() {
               </p>
               <ol>
                 <li>
-                  <strong>Sign in to an agency.</strong> Choose Quỳnh Hương for
-                  demo administrator access or Bảo Chí for member access.
+                  <strong>Sign in to your agency.</strong> Use your registered
+                  email and password. Your agency membership determines whether
+                  you are an administrator or team member.
                 </li>
                 <li>
                   <strong>Create a client brief.</strong> Enter event details
@@ -1355,8 +1296,9 @@ export default function App() {
                   as an administrator, then sign in as a member.
                 </li>
                 <li>
-                  <strong>Switch agencies.</strong> Sign out and choose Alex
-                  Nguyen. Northstar Events has a separate set of demo briefs.
+                  <strong>Verify agency protection.</strong> Sign out and use a
+                  test account belonging to a different agency. Its workspace
+                  must contain only its own briefs.
                 </li>
               </ol>
               <div className="review-note">
@@ -1366,7 +1308,7 @@ export default function App() {
                     {liveMode ? "Supabase mode" : "About local demo mode"}
                   </strong>
                   {liveMode
-                    ? "Real sign-in and database access policies require the supplied migration, function, and agency memberships configured in your Supabase project."
+                    ? "Real accounts use Supabase Auth. Database policies protect each agency’s briefs and history. Membership changes take effect on subsequent server requests."
                     : "Browser storage provides no real authentication or security boundary. Use sample data only. Supabase Auth, agency policies, and a validated backend are included for optional setup."}
                 </p>
               </div>

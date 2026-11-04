@@ -1,10 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
+import { resolveBackendConfig } from "./config.ts";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseKey)
+export const backendConfig = resolveBackendConfig(import.meta.env ?? {});
+export const supabase =
+  backendConfig.mode === "supabase" && !backendConfig.configurationError
+    ? createClient(backendConfig.url, backendConfig.key)
+    : null;

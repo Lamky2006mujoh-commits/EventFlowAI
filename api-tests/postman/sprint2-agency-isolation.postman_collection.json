@@ -1,0 +1,526 @@
+{
+  "info": {
+    "name": "EventFlow AI — Sprint 2 agency isolation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Run in order against the course development project. Two CONFIRMED accounts must be assigned to DIFFERENT agencies. Store passwords/tokens in private, unshared Postman environment variables. This collection creates one disposable brief and removes it at the end. Do not run against client production data. If interrupted, use Company A to remove only the generated test brief. Company A must be an administrator so it can clean up its test brief."
+  },
+  "variable": [
+    {
+      "key": "supabase_url",
+      "value": "https://qazukdulzixiudzyrhdn.supabase.co",
+      "type": "string"
+    },
+    {
+      "key": "publishable_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "company_a_email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "company_a_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "company_b_email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "company_b_password",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Sign in as Company A",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{supabase_url}}/auth/v1/token?grant_type=password",
+        "body": {
+          "mode": "raw",
+          "raw": "{{login_payload}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('company_a_token');",
+              "pm.environment.unset('company_a_agency');",
+              "pm.variables.set('login_payload', JSON.stringify({email: pm.environment.get('company_a_email'), password: pm.environment.get('company_a_password')}));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login succeeds', () => pm.response.to.have.status(200));",
+              "const result = pm.response.json();",
+              "if (pm.response.code === 200 && result.access_token) pm.environment.set('company_a_token', result.access_token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read Company A workspace",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{company_a_token}}"
+          }
+        ],
+        "url": "{{supabase_url}}/functions/v1/workspace",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"workspace\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Workspace accessible', () => pm.response.to.have.status(200));",
+              "const result = pm.response.json();",
+              "if (result.session) pm.environment.set('company_a_agency', result.session.agencyId);",
+              "pm.test('Company A administrator can clean up test data', () => pm.expect(result.session.role).to.equal('admin'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create disposable Company A brief",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{company_a_token}}"
+          }
+        ],
+        "url": "{{supabase_url}}/functions/v1/workspace",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"save\",\n  \"data\": {\n    \"title\": \"Agency A isolation test\",\n    \"client\": \"Disposable test client\",\n    \"eventType\": \"Workshop\",\n    \"date\": \"2026-11-28\",\n    \"venue\": \"Test hall\",\n    \"attendees\": 20,\n    \"budget\": 100000000,\n    \"objectives\": \"Verify company data isolation for Sprint 2.\",\n    \"audience\": \"Course team\",\n    \"constraints\": \"None confirmed\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Brief created', () => pm.response.to.have.status(200));",
+              "const result = pm.response.json();",
+              "if (result.id) pm.environment.set('company_a_brief_id', result.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sign in as Company B",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{supabase_url}}/auth/v1/token?grant_type=password",
+        "body": {
+          "mode": "raw",
+          "raw": "{{login_payload}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('company_b_token');",
+              "pm.environment.unset('company_b_agency');",
+              "pm.variables.set('login_payload', JSON.stringify({email: pm.environment.get('company_b_email'), password: pm.environment.get('company_b_password')}));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login succeeds', () => pm.response.to.have.status(200));",
+              "const result = pm.response.json();",
+              "if (pm.response.code === 200 && result.access_token) pm.environment.set('company_b_token', result.access_token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read Company B workspace",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{company_b_token}}"
+          }
+        ],
+        "url": "{{supabase_url}}/functions/v1/workspace",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"workspace\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Workspace accessible', () => pm.response.to.have.status(200));",
+              "const result = pm.response.json();",
+              "if (result.session) pm.environment.set('company_b_agency', result.session.agencyId);",
+              "pm.test('Accounts belong to DIFFERENT agencies', () => { pm.expect(result.session.agencyId).not.to.equal(pm.environment.get('company_a_agency')); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Control: A can read its own brief",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{company_a_token}}"
+          }
+        ],
+        "url": "{{supabase_url}}/rest/v1/briefs?id=eq.{{company_a_brief_id}}&select=*"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Own brief exists', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.have.length(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B cannot read A brief",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{company_b_token}}"
+          }
+        ],
+        "url": "{{supabase_url}}/rest/v1/briefs?id=eq.{{company_a_brief_id}}&select=*"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('RLS hides A brief', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.deep.equal([]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B cannot read A version history",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{company_b_token}}"
+          }
+        ],
+        "url": "{{supabase_url}}/rest/v1/brief_versions?brief_id=eq.{{company_a_brief_id}}&select=*"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('RLS hides A history', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.deep.equal([]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B cannot edit A brief",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{company_b_token}}"
+          }
+        ],
+        "url": "{{supabase_url}}/functions/v1/workspace",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"save\",\n  \"id\": \"{{company_a_brief_id}}\",\n  \"expectedVersion\": 1,\n  \"data\": {\n    \"title\": \"Agency A isolation test\",\n    \"client\": \"Disposable test client\",\n    \"eventType\": \"Workshop\",\n    \"date\": \"2026-11-28\",\n    \"venue\": \"Test hall\",\n    \"attendees\": 20,\n    \"budget\": 150000000,\n    \"objectives\": \"Verify company data isolation for Sprint 2.\",\n    \"audience\": \"Course team\",\n    \"constraints\": \"None confirmed\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Cross-agency edit rejected', () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B cannot delete A brief",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{company_b_token}}"
+          }
+        ],
+        "url": "{{supabase_url}}/functions/v1/workspace",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"delete\",\n  \"id\": \"{{company_a_brief_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Cross-agency delete rejected', () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Control: A brief remains unchanged",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{company_a_token}}"
+          }
+        ],
+        "url": "{{supabase_url}}/rest/v1/briefs?id=eq.{{company_a_brief_id}}&select=*"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Original budget and version preserved', () => { pm.response.to.have.status(200); const rows=pm.response.json(); pm.expect(rows).to.have.length(1); pm.expect(rows[0].data.budget).to.equal(100000000); pm.expect(rows[0].version).to.equal(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cleanup: delete only the disposable test brief",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{publishable_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{company_a_token}}"
+          }
+        ],
+        "url": "{{supabase_url}}/functions/v1/workspace",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"delete\",\n  \"id\": \"{{company_a_brief_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Disposable brief removed', () => pm.response.to.have.status(200));",
+              "pm.environment.unset('company_a_brief_id');",
+              "pm.environment.unset('company_a_token');",
+              "pm.environment.unset('company_b_token');"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

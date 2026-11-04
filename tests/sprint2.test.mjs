@@ -158,6 +158,12 @@ test("delete removes history with the brief and other briefs remain", () => {
   );
   assert.equal(demo.load().briefs.length, 1);
 });
+test("members cannot delete brief history in sample mode", () => {
+  const id = demo.login(admin).briefs[0].id;
+  demo.login(member);
+  assert.throws(() => demo.remove(id), /Only agency administrators/);
+  assert.equal(demo.load().briefs.find(b => b.id === id).history.length, 1);
+});
 test("shared request and response contracts reject invalid data and accept database timestamps", () => {
   assert.equal(
     requestSchema.safeParse({ action: "role", memberId: member, role: "owner" })
