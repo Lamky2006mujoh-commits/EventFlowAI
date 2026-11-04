@@ -1,4 +1,4 @@
-name: Sprint 2 checks
+name: Sprint 2 and 3 checks
 on:
   pull_request:
   push:
@@ -17,4 +17,13 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run lint
+      - run: npm run check:functions
+      - run: npm run verify:edge
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: test-results/

@@ -1,0 +1,14 @@
+{
+  "projectRef": "epmgcyiuloxtblzdrwsw",
+  "checkedAt": "2026-11-04T07:27:33.828Z",
+  "briefId": "fc32a034-7302-4f86-b695-52bfcffe61c6",
+  "proposalVersion": 4,
+  "proposalStatus": "Draft",
+  "historyVersions": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "browserChecks": "Passed live login, manual edit, export download, reload and logout; see tests/live-e2e/sprint3.spec.ts"
+}

@@ -19,6 +19,7 @@ console.log("PASS: invalid email/password rejected by Supabase Auth");
 for (const table of [
   "briefs",
   "brief_versions",
+  "brief_planning",
   "agency_members",
   "agencies",
 ]) {
@@ -29,21 +30,31 @@ for (const table of [
   );
   console.log(`PASS: anonymous ${table} read denied`);
 }
-for (const authorization of [null, "Bearer invalid-token"]) {
-  const headers = { "Content-Type": "application/json", apikey: key };
-  if (authorization) headers.Authorization = authorization;
-  const response = await fetch(`${url}/functions/v1/workspace`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ action: "workspace" }),
-    signal: AbortSignal.timeout(15000),
-  });
-  assert.equal(
-    response.status,
-    401,
-    "Missing or invalid credentials must be rejected",
-  );
-  console.log(
-    `PASS: ${authorization ? "invalid" : "missing"} bearer token rejected by workspace endpoint`,
-  );
+for (const endpoint of ["workspace", "planning"]) {
+  for (const authorization of [null, "Bearer invalid-token"]) {
+    const headers = { "Content-Type": "application/json", apikey: key };
+    if (authorization) headers.Authorization = authorization;
+    const response = await fetch(url + "/functions/v1/" + endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(
+        endpoint === "workspace"
+          ? { action: "workspace" }
+          : { action: "load", briefId: "10000000-0000-4000-8000-000000000001" },
+      ),
+      signal: AbortSignal.timeout(15000),
+    });
+    assert.equal(
+      response.status,
+      401,
+      "Missing or invalid credentials must be rejected",
+    );
+    console.log(
+      "PASS: " +
+        (authorization ? "invalid" : "missing") +
+        " bearer token rejected by " +
+        endpoint +
+        " endpoint",
+    );
+  }
 }

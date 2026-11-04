@@ -1,0 +1,9 @@
+project_id = "EventFlowAI"
+
+# Both handlers validate the bearer token with Supabase Auth getUser.
+# The legacy-only gateway cannot validate this project's new signing keys.
+[functions.workspace]
+verify_jwt = false
+
+[functions.planning]
+verify_jwt = false

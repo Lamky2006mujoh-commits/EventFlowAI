@@ -84,7 +84,7 @@ export default function AuthScreen({
       </section>
       <section className="login-panel">
         <div className="login-form">
-          <span className="badge neutral">SPRINT 02 · AGENCY WORKSPACE</span>
+          <span className="badge neutral">SPRINT 03 · AGENCY WORKSPACE</span>
           <h2>
             {registering
               ? "Create your account."

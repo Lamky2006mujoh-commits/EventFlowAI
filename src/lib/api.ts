@@ -1,3 +1,4 @@
+import type { PlanningRequest } from "../../supabase/functions/_shared/planning.ts";
 import { backendConfig, supabase } from "./supabase.ts";
 import { createWorkspaceApi } from "./workspace-api.ts";
 import { demo } from "./demo.ts";
@@ -12,6 +13,9 @@ function backend() {
   return live;
 }
 export const api = {
+  async planning(input: PlanningRequest) {
+    return liveMode ? backend().planning(input) : demo.planning(input);
+  },
   async load() {
     return liveMode ? backend().load() : demo.load();
   },

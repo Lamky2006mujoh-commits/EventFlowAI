@@ -8,8 +8,14 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "node --test tests/*.test.mjs",
-    "check:auth": "node --env-file=.env.local scripts/check-auth.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "check:functions": "tsc -p tsconfig.functions.json",
+    "test:ai:live": "node --env-file=.env.gemini.local tests/live-gemini.mjs",
+    "bundle:edge": "node scripts/bundle-edge.mjs",
+    "test:e2e:live": "playwright test --config=playwright.live.config.ts",
+    "verify:edge": "npm run bundle:edge && node scripts/verify-edge-bundle.mjs",
+    "check:auth": "node --env-file=.env.local scripts/check-auth.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -22,11 +28,15 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.89.0",
+    "prettier": "^3.9.10",
+    "rolldown": "^1.2.16",
     "typescript": "~7.0.2",
     "vite": "^8.3.5"
   }

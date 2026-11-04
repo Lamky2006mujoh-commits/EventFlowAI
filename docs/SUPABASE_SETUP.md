@@ -44,7 +44,7 @@ There is deliberately no public first-user-admin endpoint. The project owner mus
 - Create the intended agency and capture its generated UUID.
 - Insert membership with that user's UUID, the new agency UUID, their display name, and role `admin`.
 
-The connected course project was initialized with the user-designated account as administrator of **EventFlow Agency**. Account credentials and private email addresses are intentionally absent from repository documentation.
+The active project is now **epmgcyiuloxtblzdrwsw**, initialized with **EventFlow Agency** and a local review administrator for Sprint 3 acceptance. Read the review credentials from the ignored `.env.acceptance.local` file on this computer. Real employee accounts still require the controlled membership workflow below. See [Sprint 3 setup](SPRINT3_SETUP.md) for the deployed environment.
 
 ## Other members
 

@@ -1,0 +1,27 @@
+{
+  "projectRef": "epmgcyiuloxtblzdrwsw",
+  "startedAt": "2026-11-04T07:18:20.788Z",
+  "checks": [
+    "Real password login loads agency workspace with server-derived admin role",
+    "Saved client brief on live Supabase",
+    "Deployed Edge Function generated and persisted 2–3 real Gemini concepts",
+    "Concept selection persisted",
+    "Deployed Edge Function generated and saved real Gemini proposal",
+    "Manual proposal edits saved as v2; v1 and server author preserved",
+    "Unconfirmed regeneration cannot overwrite manual proposal",
+    "Stale planning write rejected",
+    "Reload and export retain latest saved content and Draft status",
+    "Other agency cannot read or mutate briefs/planning through RLS and Edge Function",
+    "Removed membership immediately revokes planning access",
+    "Planning endpoint denies missing authenticated JWT"
+  ],
+  "briefId": "fc32a034-7302-4f86-b695-52bfcffe61c6",
+  "conceptTitles": [
+    "AI-Augmented Planner Hackathon",
+    "The Agile Event Design Lab",
+    "Future Planning Showcase"
+  ],
+  "proposalVersion": 2,
+  "completedAt": "2026-11-04T07:19:22.018Z",
+  "status": "passed"
+}

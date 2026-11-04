@@ -2050,3 +2050,132 @@ td {
     padding: 8px 5px;
   }
 }
+
+.planning-panel {
+  margin: 28px 0;
+  padding: 24px;
+  border: 1px solid #cddfd7;
+}
+.planning-heading {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: start;
+  flex-wrap: wrap;
+}
+.planning-heading h3 {
+  margin: 8px 0;
+}
+.planning-heading p {
+  color: #66766d;
+}
+.concept-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.concept-card {
+  border: 1px solid #dce5df;
+  border-radius: 12px;
+  padding: 16px;
+  overflow-wrap: anywhere;
+}
+.concept-card.selected {
+  border: 2px solid #337456;
+  background: #f1f8f3;
+}
+.concept-card h4 {
+  font-size: 18px;
+  margin: 14px 0;
+}
+.concept-card h5 {
+  font-size: 13px;
+  margin: 18px 0 8px;
+}
+.concept-card ul {
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.concept-card .button {
+  width: 100%;
+  margin-top: 14px;
+}
+.proposal-editor {
+  border-top: 1px solid #dce5df;
+  margin-top: 24px;
+  padding-top: 20px;
+}
+.proposal-editor textarea {
+  width: 100%;
+}
+.proposal-snapshot {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #f5f7f4;
+  padding: 18px;
+  max-height: 460px;
+  overflow: auto;
+}
+.planning-confirm {
+  padding: 18px;
+  background: #fff4da;
+  border: 1px solid #e6c56e;
+  border-radius: 10px;
+  margin: 18px 0;
+}
+.planning-confirm .button {
+  margin: 5px;
+}
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #3c7355;
+}
+@media (max-width: 1100px) {
+  .concept-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detail-layout > *,
+.planning-heading > *,
+.proposal-editor,
+.planning-panel .field {
+  min-width: 0;
+}
+.planning-panel select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.planning-panel .form-actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 650px) {
+  .planning-panel {
+    padding: 16px;
+  }
+  .planning-panel .button {
+    width: 100%;
+    white-space: normal;
+    height: auto;
+  }
+  .planning-heading,
+  .detail-meta strong {
+    overflow-wrap: anywhere;
+  }
+  .detail-title {
+    flex-wrap: wrap;
+  }
+}
+
+.concept-grid[data-count="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+  .concept-grid[data-count="2"] {
+    grid-template-columns: 1fr;
+  }
+}

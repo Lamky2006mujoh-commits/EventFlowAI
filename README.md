@@ -1,6 +1,6 @@
-# EventFlow AI — Sprint 2
+# EventFlow AI — Sprint 3
 
-A localhost React app connected to Supabase for real admin/member accounts, agency-protected client briefs, and version history.
+A React app connected to Supabase for agency-protected client briefs, Gemini concept generation, and editable proposals with version history.
 
 ## Run
 
@@ -11,7 +11,7 @@ npm install
 npm run dev -- --host 127.0.0.1
 ```
 
-Open the URL printed by Vite. The current course session uses http://localhost:5174/. Both administrators and members sign in with email/password. Their role comes from server-side agency membership, never a role selected on the login form.
+Open the URL printed by Vite. The current workspace runs at http://localhost:5173/ and uses the newly deployed Supabase project `epmgcyiuloxtblzdrwsw`. Review account credentials are stored locally in the ignored `.env.acceptance.local` file. Both administrators and members sign in with email/password. Their role comes from server-side agency membership, never a role selected on the login form.
 
 Configure `.env.local` with the project public values:
 
@@ -47,13 +47,26 @@ The first administrator must be explicitly provisioned by the project owner; the
 - **S2-T01:** Shared Zod request/data/response contracts, automated tests, and GitHub CI.
 - **P1 extras:** Readiness checks and administrator member/role management.
 
-AI generation, proposals, logistics, feasibility, and execution are outside this increment. Browser-only sample mode is still available explicitly with `VITE_APP_MODE=demo`; it is simulated and must not be used for confidential data.
+## Sprint 3 features
+
+- **US-04:** Gemini concepts through an authenticated Edge Function; 2–3 structured concepts, Zod validation, bounded retries and controlled errors.
+- **US-05:** Compare themes, activities and assumptions; persist the selected concept.
+- **US-06:** Generate and edit proposal sections, append author/timestamp versions, explicitly confirm regeneration and retain manual edits in history.
+- **S3-T01:** Automated workflow, provider failure, HTTP authorization and PostgreSQL RLS/RPC checks.
+- **US-07 (P1):** Export the latest saved proposal as UTF-8 text with title, content, version and status.
+- **Sprint 2 improvements:** Distinct messages for authentication/email rate limits and unconfirmed email; SQL security regression tests and mobile layout fixes.
+
+Configure the new migration, `planning` Edge Function and server-only Gemini secrets using [Sprint 3 setup](docs/SPRINT3_SETUP.md). See [test results](docs/SPRINT3_TEST_REPORT.md) for verification boundaries.
+
+Browser-only sample mode is available explicitly with `VITE_APP_MODE=demo`; it uses labeled sample templates instead of AI and must not be used for confidential data. Logistics, feasibility and execution remain outside this increment.
 
 ## Verification
 
 ```powershell
 npm test
 npm run lint
+npm run check:functions
+npm run verify:edge
 npm run build
 ```
 
@@ -65,4 +78,8 @@ node --env-file=.env.local tests/live-anonymous.mjs
 
 `tests/database-security.sql` verifies agency boundaries, immutable history, author attribution, stale writes, invalid input, role escalation, membership removal, and anonymous denial using temporary fixtures inside a transaction that is rolled back. Run it against a development project using its SQL Editor or the connected Supabase tool. It does not require or expose a user's password.
 
-CI runs tests, lint, and build on pull requests and pushes to `main`. The database checks require a configured Supabase project and are separate from unit tests.
+CI runs unit/integration tests, PostgreSQL checks, lint, function type checks, production build and Chromium E2E tests on pull requests and pushes to `main`. Local PostgreSQL checks use PGlite with all real migrations and temporary Auth fixtures. The standalone SQL script can also be run against a development Supabase project.
+
+Browser checks: `npx playwright install chromium`, then `npm run test:e2e`. To use an installed browser instead, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its executable path.
+
+Live verification is complete on the new Supabase project: real Gemini generation, 12 backend checks, 10 anonymous checks and a real browser workflow. Use `npm run test:e2e:live` to repeat the browser check with the local review account. Email rate limiting is deferred as requested.

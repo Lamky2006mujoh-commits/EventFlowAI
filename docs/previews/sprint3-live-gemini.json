@@ -1,0 +1,58 @@
+{
+  "startedAt": "2026-11-04T06:52:12.174Z",
+  "completedAt": "2026-11-04T06:52:58.048Z",
+  "provider": "Gemini",
+  "model": "gemini-3.5-flash",
+  "fixture": "Public synthetic event; no real client data",
+  "brief": {
+    "title": "EventFlow Sprint 3 acceptance workshop",
+    "client": "EventFlow Course Team",
+    "eventType": "Workshop",
+    "date": "2026-11-28",
+    "venue": "Ho Chi Minh City training hall",
+    "attendees": 80,
+    "budget": 100000000,
+    "objectives": "Showcase the AI event concept and proposal workflow with practical participant activities.",
+    "audience": "Event agency planners and project reviewers",
+    "constraints": "Indoor venue, accessible entry, vegetarian meal options; suppliers not yet confirmed."
+  },
+  "concepts": [
+    {
+      "title": "AI Co-Pilot Design Studio: From Brief to Pitch",
+      "theme": "Interactive Tech Innovation Lab",
+      "activities": [
+        "Live demonstration of AI-driven event brief parsing and concept generation",
+        "Hands-on breakout challenge: Crafting client pitches using EventFlow AI tools",
+        "Peer feedback and live voting session for the most creative AI-assisted proposal"
+      ],
+      "assumptions": [
+        "Assumption: High-speed Wi-Fi and power outlets will be accessible for all 80 attendees in the HCMC training hall.",
+        "Assumption: Attendees will bring their own laptops or mobile devices to participate in hands-on activities.",
+        "Assumption: Catering suppliers can fulfill vegetarian options within the allocated budget, subject to confirmation."
+      ]
+    },
+    {
+      "title": "The Future-Ready Planner: Masterclass & Hackathon",
+      "theme": "Futuristic Event Strategy & Agile Workflow",
+      "activities": [
+        "Keynote presentation on AI transformation in event management and proposal workflows",
+        "Speed-ideation sprint where groups solve real-world agency briefs using EventFlow AI",
+        "Panel discussion and Q&A with industry reviewers analyzing AI pitch outputs"
+      ],
+      "assumptions": [
+        "Assumption: Audio-visual equipment and projection screens are available at the indoor venue.",
+        "Assumption: Workshop facilitators will be trained on EventFlow Sprint 3 features prior to the event date.",
+        "Assumption: All vendor services including catering and AV support remain unconfirmed until contract execution."
+      ]
+    }
+  ],
+  "selectedIndex": 0,
+  "proposal": {
+    "title": "AI Co-Pilot Design Studio: From Brief to Pitch - EventFlow Sprint 3 Acceptance Workshop",
+    "objectives": "Showcase the AI event concept and proposal workflow with practical participant activities, enabling attendees to evaluate AI-driven brief parsing, concept generation, and pitch creation firsthand.",
+    "audience": "Event agency planners and project reviewers (approximately 80 attendees) looking to integrate modern AI tools into agency workflows.",
+    "theme": "Interactive Tech Innovation Lab",
+    "agenda": "08:30 AM - Registration & Welcome; 09:00 AM - Live Demonstration: AI Event Brief Parsing & Concept Generation; 09:45 AM - Hands-on Breakout Challenge: Crafting Client Pitches via EventFlow AI; 11:15 AM - Peer Feedback & Live Voting Session; 12:00 PM - Wrap-up & Networking Lunch.",
+    "assumptions": "Assumption: High-speed Wi-Fi and sufficient power outlets will be available in the HCMC training hall. Assumption: Attendees will bring personal laptops or mobile devices. Assumption: Catering suppliers can fulfill vegetarian options within the 100,000,000 VND budget upon formal confirmation. Assumption: All suppliers and venue specifications are unconfirmed and subject to final review."
+  }
+}

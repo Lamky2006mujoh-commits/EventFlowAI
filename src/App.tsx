@@ -1,3 +1,4 @@
+import PlanningPanel from "./components/PlanningPanel";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
@@ -356,6 +357,7 @@ export default function App() {
   const [filter, setFilter] = useState("all");
   const [version, setVersion] = useState<number | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+  const [planningDirty, setPlanningDirty] = useState(false);
   const [deleteText, setDeleteText] = useState("");
   const [removeMemberId, setRemoveMemberId] = useState<string | null>(null);
   useEffect(() => {
@@ -414,6 +416,13 @@ export default function App() {
   }
   function navigate(next: Page, id: string | null = null) {
     if (busy) return;
+    if (
+      planningDirty &&
+      !window.confirm(
+        "Leave this page and discard unsaved proposal edits? Saved versions will remain available.",
+      )
+    )
+      return;
     setPage(next);
     setSelectedId(id);
     setVersion(null);
@@ -475,7 +484,7 @@ export default function App() {
     members: "Agency members",
     form: selected ? "Edit client brief" : "Create a client brief",
     detail: "Brief details",
-    guide: "Your Sprint 2 demo",
+    guide: "Your workspace guide",
   };
   function openBrief(id: string) {
     navigate("detail", id);
@@ -989,9 +998,22 @@ export default function App() {
                       <strong>Planning outputs need review.</strong>The brief
                       has changed since its first version. Any dependent
                       concepts or proposals must be checked against the latest
-                      brief. AI generation belongs to a later sprint.
+                      brief. Generate new concepts from the latest saved
+                      version.
                     </p>
                   </div>
+                )}
+                {!viewing && (
+                  <PlanningPanel
+                    key={selected.id + ":" + selected.version}
+                    brief={selected}
+                    onDirtyChange={setPlanningDirty}
+                    onSessionError={(e) => {
+                      void run(async () => {
+                        throw e;
+                      });
+                    }}
+                  />
                 )}
                 <VersionChanges
                   brief={selected}
@@ -1267,12 +1289,13 @@ export default function App() {
           )}
           {page === "guide" && (
             <section className="panel guide">
-              <span className="badge neutral">SPRINT 2 · BRIEF MANAGEMENT</span>
-              <h2>A focused demo, from sign-in to saved history.</h2>
+              <span className="badge neutral">
+                SPRINT 3 · CONCEPT & PROPOSAL
+              </span>
+              <h2>From a saved brief to an editable proposal.</h2>
               <p>
-                Run through these steps to show the Sprint 2 increment. AI
-                concepts, proposals, logistics, and execution are future
-                sprints.
+                Review the brief workflow, compare concepts, then create and
+                edit a proposal. Every saved proposal version remains available.
               </p>
               <ol>
                 <li>
@@ -1293,6 +1316,13 @@ export default function App() {
                   <strong>Check readiness.</strong> Leave audience or
                   constraints empty to see suggested clarifications. Fill them
                   to make the brief ready for planning.
+                </li>
+                <li>
+                  <strong>Create a proposal.</strong> Open the latest saved
+                  brief, generate concepts, compare their themes and
+                  assumptions, select one, then generate and edit a proposal.
+                  Save a new version or export the latest saved content.
+                  Regeneration requires confirmation.
                 </li>
                 <li>
                   <strong>Check member permissions.</strong> Try role controls
@@ -1322,7 +1352,7 @@ export default function App() {
           )}
           <footer className="page-footer">
             <span>Thoughtfully planned. Beautifully brought together.</span>
-            <span>EventFlow AI · Sprint 02</span>
+            <span>EventFlow AI · Sprint 03</span>
           </footer>
         </main>
       </div>

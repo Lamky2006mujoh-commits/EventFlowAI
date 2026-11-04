@@ -1,3 +1,8 @@
+import {
+  planningRequestSchema,
+  planningSchema,
+  type PlanningRequest,
+} from "../../supabase/functions/_shared/planning.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { authFailureMessage } from "./auth-errors.ts";
 import {
@@ -20,14 +25,26 @@ export class AccessRevokedError extends SessionExpiredError {
       "Your account has no agency access. Ask your administrator to add you.";
   }
 }
+export function authErrorMessage(
+  error: { status?: number; code?: string; name?: string },
+  registration = false,
+) {
+  return authFailureMessage(error, registration ? "signup" : "login");
+}
 export function createWorkspaceApi(
   client: Pick<SupabaseClient, "auth" | "functions">,
 ) {
   let sessionRevision = 0;
-  async function request(body: ApiRequest) {
+  async function request(
+    body: ApiRequest | PlanningRequest,
+    endpoint = "workspace",
+  ) {
     const revision = sessionRevision;
-    const { data, error } = await client.functions.invoke("workspace", {
-      body: requestSchema.parse(body),
+    const { data, error } = await client.functions.invoke(endpoint, {
+      body:
+        endpoint === "planning"
+          ? planningRequestSchema.parse(body)
+          : requestSchema.parse(body),
     });
     if (revision !== sessionRevision) throw new SessionExpiredError();
     if (error) {
@@ -47,6 +64,9 @@ export function createWorkspaceApi(
     return data;
   }
   const api = {
+    async planning(input: PlanningRequest) {
+      return planningSchema.parse(await request(input, "planning"));
+    },
     async load() {
       return workspaceSchema.parse(await request({ action: "workspace" }));
     },
