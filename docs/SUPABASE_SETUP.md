@@ -1,42 +1,31 @@
-# Optional Supabase mode
+# Supabase setup and verification
 
-The localhost demo runs immediately without this setup. Real Sprint 2 authentication and agency isolation require the cloud backend. No migration or function has been deployed automatically.
+The app uses real Supabase accounts by default. Explicit `VITE_APP_MODE=demo` enables the older browser-only samples.
 
-## 1. Prepare a development project
+## Database and backend
 
-Use a dedicated Supabase development project. Run `supabase/migrations/202611040001_sprint2.sql` once in its SQL Editor after reviewing it. It creates agencies, agency membership, briefs, immutable version records, RLS read policies, and permission-checked write functions. Do not rerun the migration on an existing schema.
+For a new project, apply these migrations in order, once each:
 
-Create test accounts through Supabase Authentication. This demo uses existing email/password accounts; public sign-up, invitations, and password recovery are outside this increment.
+1. `supabase/migrations/20261104024425_sprint2_agency_briefs.sql`
+2. `supabase/migrations/20261104024516_sprint2_member_management.sql`
+3. `supabase/migrations/20261104025022_sprint2_restrict_rpc_execution.sql`
+4. `supabase/migrations/20261104025815_sprint2_admin_brief_deletion.sql`
 
-Create agency rows and membership rows using the SQL Editor as the project administrator. Use actual user UUIDs from Authentication:
+They create agencies, memberships, briefs, and version history; enable RLS; and expose checked atomic RPCs. Existing connection-test data is untouched. Do not rerun them on an existing schema.
 
-```sql
-insert into public.agencies (id, name)
-values ('11111111-1111-4111-8111-111111111111', 'Flow Studio');
-
--- Replace the example user UUID with an existing Auth user's UUID.
-insert into public.agency_members (user_id, agency_id, display_name, role)
-values ('22222222-2222-4222-8222-222222222222',
-        '11111111-1111-4111-8111-111111111111', 'Course Administrator', 'admin');
-```
-
-The small-course model intentionally supports one agency per account. Add a second agency and separate users to verify isolation. Add a `member` account in the first agency to verify permissions.
-
-## 2. Deploy the workspace function
-
-With the Supabase CLI already installed and authenticated, run:
+Deploy the function after reviewing the source:
 
 ```powershell
 supabase functions deploy workspace --project-ref YOUR_PROJECT_REF
 ```
 
-The function uses `supabase/functions/workspace/deno.json` for imports and shares the Zod contract in `supabase/functions/_shared/contracts.ts` with React. It authenticates the bearer token with `auth.getUser()` and uses that user's token for database reads and RPCs. It never uses a service-role key.
+The workspace function validates the signed-in user and shared Zod payloads. It queries the database with that user's token. Server membership determines the agency and permissions; submitted agency/role metadata is never trusted. The backend does not need a service-role key.
 
-Default CORS origins cover localhost and 127.0.0.1 on ports 5173 and 5174. For another origin, set the function's `ALLOWED_ORIGINS` secret to a comma-separated list of exact allowed origins.
+Default CORS origins are localhost and 127.0.0.1 on ports 5173 and 5174. Other frontend origins require an exact comma-separated `ALLOWED_ORIGINS` function setting.
 
-## 3. Enable the frontend
+## Frontend configuration
 
-Preserve any existing `.env.local` values. Add the explicit mode setting and use your project's public URL and publishable key:
+Preserve the existing `.env.local` values:
 
 ```dotenv
 VITE_APP_MODE=supabase
@@ -44,55 +33,47 @@ VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_PUBLISHABLE_KEY
 ```
 
-`VITE_SUPABASE_ANON_KEY` is also accepted for projects using legacy anon keys. Never put a service-role key, secret key, or password into a `VITE_` variable. Restart Vite after environment changes. Set `VITE_APP_MODE=demo` to return to the offline sample workflow.
+`VITE_SUPABASE_ANON_KEY` is an accepted legacy alias. Restart Vite after environment changes. Public keys identify the project; they do not replace a signed-in user's access token. Never expose a service-role/secret key in frontend configuration.
 
-## 4. Verify before calling backend stories Done
+## First administrator
 
-Run `deno check supabase/functions/workspace/index.ts` if Deno is available. Then test the following against the configured development project using the UI and Postman:
+There is deliberately no public first-user-admin endpoint. The project owner must assign the first confirmed user to an agency through a trusted administrative connection. Register and confirm the intended account first. In a reviewed owner-only SQL transaction:
 
-| Check | Expected result |
-| --- | --- |
-| Valid and invalid passwords | Only valid credentials open the workspace |
-| Missing, invalid, or expired access token | Workspace function rejects the request |
-| Valid create and edit | Brief ID returned; edit appends author/timestamp/version |
-| Negative budget, impossible date, or blank required field | Rejected; no brief or history inserted |
-| Two edits with the same expected version | Second edit rejected; first edit retained |
-| Agency B reads Agency A brief or version using REST | No rows returned under RLS |
-| Agency B calls save/delete RPC with Agency A brief ID | Rejected |
-| Ordinary member calls role-change RPC directly | Rejected |
-| Admin changes a role | Updated permissions apply to the next request |
-| Last administrator attempts self-demotion | Rejected |
-| Direct table insert/update/delete by authenticated user | Rejected; writes must use checked RPCs |
-| Sign out then access protected data | Access denied |
+- Find the confirmed Auth user by their exact registered email.
+- Verify they have no existing membership.
+- Create the intended agency and capture its generated UUID.
+- Insert membership with that user's UUID, the new agency UUID, their display name, and role `admin`.
 
-Postman function requests use `POST https://YOUR_PROJECT_REF.supabase.co/functions/v1/workspace`, `Content-Type: application/json`, `apikey: YOUR_PUBLISHABLE_KEY`, and `Authorization: Bearer YOUR_USER_ACCESS_TOKEN`.
+The connected course project was initialized with the user-designated account as administrator of **EventFlow Agency**. Account credentials and private email addresses are intentionally absent from repository documentation.
 
-Example bodies:
+## Other members
 
-```json
-{ "action": "workspace" }
-```
+Employees create and confirm their own accounts in the app. An agency administrator adds each registered email under **Members & roles**. Only confirmed accounts without another agency membership can be added. New members are added as `member`; promotion is a separate administrator action. Administrators may remove agency access without deleting the Auth account. At least one administrator must remain.
 
-```json
-{
-  "action": "save",
-  "data": {
-    "title": "Course demo event",
-    "client": "Sample Client",
-    "eventType": "Workshop",
-    "date": "2026-11-28",
-    "venue": "UIT Hall",
-    "attendees": 80,
-    "budget": 30000000,
-    "objectives": "Present the team project and gather feedback.",
-    "audience": "Course participants",
-    "constraints": "None confirmed"
-  }
-}
-```
+One account belongs to one agency in this small-course implementation. Agency transfers, email invitations, and password recovery are outside this increment.
 
-For editing, add `id` and `expectedVersion` to the save body. For a role change, use `{"action":"role","memberId":"USER_UUID","role":"member"}`. Keep access tokens/passwords private and out of exported collections.
+Members can create and edit agency briefs and inspect preserved versions. Only administrators can permanently delete a brief and its history, after explicit UI confirmation.
 
-## Verification boundary
+## Verification
 
-Automated tests exercise the browser-demo implementation and shared contracts. They do not establish Supabase RLS or real authentication correctness. The cloud migration, Deno function, and cross-agency backend tests require an actual configured project and must be verified separately. Browser-only mode has no security boundary and is for sample data.
+Run `npm test`, `npm run lint`, and `npm run build` locally. `tests/live-anonymous.mjs` checks invalid credentials, anonymous table reads, and missing/invalid bearer tokens against the configured project. `tests/database-security.sql` performs authenticated/anonymous checks with rolled-back fixtures:
+
+- Users cannot read another agency's briefs, membership, or version history.
+- Cross-agency saves/deletes and direct table writes are rejected.
+- A member can edit an agency brief; old snapshots and author/timestamp are retained.
+- Stale saves and invalid budgets are rejected.
+- Members cannot grant themselves roles or remove other members.
+- Administrators cannot move another agency's member into their agency.
+- Unconfirmed accounts cannot be added.
+- Removed members cannot read or write agency briefs.
+- Anonymous table reads and RPC execution are denied.
+
+Complete the browser acceptance flow with separate real admin/member accounts: login, create brief, change budget, compare versions, logout, then test the same flow as a member. Wrong credentials must stay outside the workspace.
+
+Import `api-tests/postman/sprint2-agency-isolation.postman_collection.json` into Postman to repeat the cross-company test. Create a private environment containing `publishable_key`, `company_a_email`, `company_a_password`, `company_b_email`, and `company_b_password`. Company A must use an administrator account for test cleanup; Company B may use an admin or member. The accounts must belong to different agencies. Run the collection in order: it checks that A can read its own brief, B cannot read/edit/delete it or see its history, and A's original budget stays unchanged. It deletes only the disposable test brief at the end. Do not share or export environment values containing passwords or access tokens.
+
+## Security advisor interpretation
+
+Supabase reports advisory 0029 for the six intentionally callable SECURITY DEFINER helpers/RPCs. Their design is deliberate: clients cannot write tables directly, so the atomic write functions derive identity from `auth.uid()`, check agency/role, and use an empty search path. Anonymous execution is explicitly revoked. The security tests exercise both direct RPC calls and RLS reads; UI restrictions are not the security boundary. Review any changes to those functions carefully.
+
+Advisor reference: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable

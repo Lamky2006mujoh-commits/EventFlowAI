@@ -166,7 +166,9 @@ export const demo = {
     return id;
   },
   remove(id: string) {
-    const { store, workspace } = context();
+    const { store, workspace, member } = context();
+    if (member.role !== "admin")
+      throw new Error("Only agency administrators can delete briefs.");
     if (!workspace.briefs.some((b) => b.id === id))
       throw new Error("Brief not found in your agency.");
     workspace.briefs = workspace.briefs.filter((b) => b.id !== id);

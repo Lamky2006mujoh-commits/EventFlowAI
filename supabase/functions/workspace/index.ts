@@ -10,6 +10,8 @@ const publicErrors = new Set([
   "Invalid role",
   "Member not found in your agency",
   "Keep at least one agency administrator",
+  "Invalid member details",
+  "Account cannot be added. Confirm registration and agency eligibility",
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -152,6 +154,22 @@ Deno.serve(async (req: Request) => {
     }
     if (input.action === "delete") {
       const result = await client.rpc("delete_brief", { p_id: input.id });
+      if (result.error) throw result.error;
+      return respond({ success: true });
+    }
+    if (input.action === "addMember") {
+      const result = await client.rpc("add_agency_member", {
+        p_email: input.email,
+        p_name: input.name,
+        p_role: input.role,
+      });
+      if (result.error) throw result.error;
+      return respond({ success: true });
+    }
+    if (input.action === "removeMember") {
+      const result = await client.rpc("remove_agency_member", {
+        p_member_id: input.memberId,
+      });
       if (result.error) throw result.error;
       return respond({ success: true });
     }

@@ -1,49 +1,51 @@
-# EventFlow AI — Sprint 2 course demo
+# EventFlow AI — Sprint 2
 
-A small, runnable agency workspace for the Sprint 2 backlog: sign-in flow, agency-scoped client briefs, editing/version history, shared validation, readiness checks, and member roles.
+A localhost React app connected to Supabase for real admin/member accounts, agency-protected client briefs, and version history.
 
-## Run locally
+## Run
 
-Requires Node.js 24+ for the included tests.
+Use Node.js 24 or newer.
 
 ```powershell
 npm install
 npm run dev -- --host 127.0.0.1
 ```
 
-Open the URL printed by Vite, normally http://127.0.0.1:5173. If that port is occupied, Vite chooses the next available port. No cloud services, passwords, or API keys are required in the default demo mode.
+Open the URL printed by Vite. The current course session uses http://localhost:5174/. Both administrators and members sign in with email/password. Their role comes from server-side agency membership, never a role selected on the login form.
 
-## Present the demo
+Configure `.env.local` with the project public values:
 
-1. Choose **Quỳnh Hương · Flow Studio · admin**, then enter the demo workspace.
-2. Create a brief. Submit incomplete fields first to show validation, then save valid event details to see a brief ID.
-3. Edit its budget, audience, and constraints. Save version 2 and open version 1 to show preserved values, author, and timestamp.
-4. Fill optional details to see readiness change. Clarifications are labeled suggestions, not client requirements.
-5. Open **Members & roles**. Admins can update roles, with a guard against removing the last administrator.
-6. Sign out and choose **Bảo Chí** to show member controls. Choose **Alex Nguyen** to show a separate sample agency.
-7. Refresh the page: briefs persist in local storage and the demo session persists in the current tab.
+```dotenv
+VITE_APP_MODE=supabase
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_PUBLISHABLE_KEY
+```
 
-The in-app **Demo guide** includes this walkthrough. Browser storage simulates sign-in and permissions; it is not real authentication or secure tenant isolation. Use sample data only.
+Legacy `VITE_SUPABASE_ANON_KEY` is also supported. Missing/invalid live configuration shows a setup error and never falls back to simulated access. Never put a service-role key, secret key, or password in a `VITE_` variable.
 
-## Sprint 2 coverage
+## Account workflow
 
-| Backlog item | Included implementation |
-| --- | --- |
-| US-20 — authentication | Demo sign-in/out and protected workspace; optional Supabase email/password adapter |
-| US-21 — agency isolation | Separate demo agency data; optional server RLS and checked RPCs |
-| US-01 — create brief | Required field/budget validation, saved brief ID, success/error states |
-| US-02 — edit/version history | Append-only saved snapshots, author/time, stale-write rejection, dependent-output review flag |
-| S2-T01 — shared schemas | Same Zod request/data/response contracts imported by frontend and Edge Function |
-| US-03 — readiness (P1) | Missing optional information and labeled suggested clarifications |
-| US-22 — roles (P1) | Admin/member UI, demo role checks, optional server permission checks |
+1. A new employee selects **Create an account**, enters their own name/email/password, and confirms the email sent by Supabase.
+2. Registration alone grants no agency access or admin privileges.
+3. An existing agency administrator opens **Members & roles** and adds the confirmed account's registered email and name. The account starts as a member.
+4. The employee signs in to access that agency's workspace. Members can create, view, and edit agency briefs and inspect version history.
+5. Administrators can also change roles and remove membership. The last administrator cannot be removed or demoted. Removal revokes subsequent backend data access without deleting the Auth account.
+6. **Sign out** ends the current browser session and clears the protected UI. Other-browser logout and expired sessions are handled too.
 
-AI generation, proposals, logistics, feasibility, and execution tasks belong to later sprints. The review flag is groundwork for those future outputs; no generated output is fabricated.
+The first administrator must be explicitly provisioned by the project owner; there is no public bootstrap or automatic first-user-admin endpoint. See [Supabase setup](docs/SUPABASE_SETUP.md).
 
-## Optional real Supabase backend
+## Sprint 2 features
 
-See [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md). The backend includes an SQL migration and a single authenticated Edge Function, using existing dependencies. Default mode remains local even when Supabase keys already exist. Enable it explicitly with `VITE_APP_MODE=supabase` after setup. Existing `.env.local` configuration should be preserved.
+- **US-20:** Supabase Auth registration, email/password login, logout, session restoration, and expired-session handling.
+- **US-21:** Agency membership, database RLS, authenticated API requests, and checked database functions. Cross-agency reads and writes are denied at the server.
+- **US-01:** Validated client brief form including event type, objectives, attendees, date, venue, budget, and special requirements; saved brief ID and failure states.
+- **US-02:** Editing appends a snapshot with author and timestamp. The **What changed** table shows before/after values for the selected version. Previous versions are preserved, stale saves are rejected, and dependent outputs are marked for review.
+- **S2-T01:** Shared Zod request/data/response contracts, automated tests, and GitHub CI.
+- **P1 extras:** Readiness checks and administrator member/role management.
 
-## Checks
+AI generation, proposals, logistics, feasibility, and execution are outside this increment. Browser-only sample mode is still available explicitly with `VITE_APP_MODE=demo`; it is simulated and must not be used for confidential data.
+
+## Verification
 
 ```powershell
 npm test
@@ -51,16 +53,12 @@ npm run lint
 npm run build
 ```
 
-Tests cover validation boundaries, create/edit history, attribution, conflicting edits, demo agency boundaries, member restrictions, last-admin protection, readiness, session handling, deletion, and failed storage writes. Real Supabase authentication, RLS, and function deployment require the separate live checks in the setup guide.
+Read-only live anonymous/authentication checks:
 
-## Code layout
+```powershell
+node --env-file=.env.local tests/live-anonymous.mjs
+```
 
-- `src/App.tsx` — workspace UI and workflow
-- `src/lib/demo.ts` — browser-only sample data adapter
-- `src/lib/api.ts` — adapter selection and Supabase access
-- `supabase/functions/_shared/contracts.ts` — shared Zod contracts/readiness checks
-- `supabase/functions/workspace/` — authenticated backend gateway
-- `supabase/migrations/` — tables, RLS, atomic version saves, permission checks
-- `tests/sprint2.test.mjs` — deterministic local tests
+`tests/database-security.sql` verifies agency boundaries, immutable history, author attribution, stale writes, invalid input, role escalation, membership removal, and anonymous denial using temporary fixtures inside a transaction that is rolled back. Run it against a development project using its SQL Editor or the connected Supabase tool. It does not require or expose a user's password.
 
-No commits, deployments, paid services, or additional dependencies are needed for the local demo.
+CI runs tests, lint, and build on pull requests and pushes to `main`. The database checks require a configured Supabase project and are separate from unit tests.

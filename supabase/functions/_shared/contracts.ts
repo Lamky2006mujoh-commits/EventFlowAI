@@ -64,6 +64,11 @@ export const workspaceSchema = z.object({
   members: z.array(memberSchema),
 });
 export type Workspace = z.infer<typeof workspaceSchema>;
+export const registrationSchema = z.object({
+  name: z.string().trim().min(2, "Enter your full name.").max(160),
+  email: z.email(),
+  password: z.string().min(12, "Use at least 12 characters.").max(128),
+});
 export const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("workspace") }),
   z.object({
@@ -74,8 +79,38 @@ export const requestSchema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("delete"), id: z.uuid() }),
   z.object({ action: z.literal("role"), memberId: z.uuid(), role: roleSchema }),
+  z.object({
+    action: z.literal("addMember"),
+    email: z.email(),
+    name: z.string().trim().min(2).max(160),
+    role: roleSchema,
+  }),
+  z.object({ action: z.literal("removeMember"), memberId: z.uuid() }),
 ]);
 export type ApiRequest = z.infer<typeof requestSchema>;
+
+export const briefFieldLabels: Record<keyof BriefData, string> = {
+  title: "Event name",
+  client: "Client",
+  eventType: "Event type",
+  date: "Event date",
+  venue: "Venue",
+  attendees: "Expected attendees",
+  budget: "Client budget (VND)",
+  objectives: "Event objectives",
+  audience: "Audience profile",
+  constraints: "Planning constraints",
+};
+export function briefChanges(before: BriefData, after: BriefData) {
+  return (Object.keys(briefFieldLabels) as (keyof BriefData)[])
+    .filter((field) => before[field] !== after[field])
+    .map((field) => ({
+      field,
+      label: briefFieldLabels[field],
+      before: before[field],
+      after: after[field],
+    }));
+}
 
 export function readiness(data: BriefData) {
   const missing: { field: string; suggestion: string }[] = [];
