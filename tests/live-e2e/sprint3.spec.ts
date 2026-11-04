@@ -24,11 +24,16 @@ test("live Supabase login, saved AI proposal, manual version, export, reload and
   const heading = page.getByRole("heading", {
     name: /Proposal · v\d+ · Draft/,
   });
-  await expect(heading).toBeVisible();
+  await expect(heading).toBeVisible({ timeout: 30000 });
   const currentVersion = Number(
     (await heading.innerText()).match(/v(\d+)/)![1],
   );
   const nextVersion = currentVersion + 1;
+  const addBudget = page.getByRole("button", {
+    name: "Thêm bảng ngân sách dự kiến",
+    exact: true,
+  });
+  if (await addBudget.isVisible()) await addBudget.click();
   const theme = page.getByRole("textbox", { name: "Theme", exact: true });
   const original = await theme.inputValue();
   await theme.fill("Browser-reviewed: " + original);

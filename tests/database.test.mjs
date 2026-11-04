@@ -1,3 +1,4 @@
+import { baselineBudget } from "../supabase/functions/_shared/budget.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
@@ -111,6 +112,7 @@ test("Sprint 3 PostgreSQL: RLS, atomic versions, validation, confirmation, stale
       theme: "Theme",
       agenda: "Agenda",
       assumptions: "Pending",
+      budget: baselineBudget(10000000, 20),
     };
     s = await call("generateProposal", 2, 1, { data });
     assert.equal(s.proposal.version, 1);
@@ -342,6 +344,7 @@ test("Edge HTTP → Gemini → real PostgreSQL: full workflow, API failure and s
       theme: "Theme",
       agenda: "Welcome",
       assumptions: "Pending",
+      budget: baselineBudget(10000000, 20),
     };
     const response = (value) =>
       new Response(
@@ -441,6 +444,157 @@ test("Edge HTTP → Gemini → real PostgreSQL: full workflow, API failure and s
     );
   } finally {
     globalThis.fetch = originalFetch;
+    await db.close();
+  }
+});
+
+test("PostgreSQL venue snapshots preserve manual content, other costs and immutable history", async () => {
+  const db = await database();
+  try {
+    const user = "71000000-0000-4000-8000-000000000001",
+      agency = "71000000-0000-4000-8000-000000000002";
+    const data = {
+      title: "Venue SQL test",
+      client: "Review",
+      eventType: "Workshop",
+      date: "2026-11-28",
+      venue: "Việt Nam",
+      attendees: 80,
+      budget: 100000000,
+      objectives: "Plan workshop",
+      audience: "Team",
+      constraints: "Pending",
+    };
+    await db.query("insert into auth.users(id) values($1)", [user]);
+    await db.query("insert into agencies(id,name) values($1,$2)", [
+      agency,
+      "Venue Agency",
+    ]);
+    await db.query(
+      "insert into agency_members(user_id,agency_id,display_name,role) values($1,$2,'Planner','member')",
+      [user, agency],
+    );
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [
+      user,
+    ]);
+    await db.exec("set role authenticated");
+    const id = (
+      await db.query("select save_brief($1::jsonb) as id", [
+        JSON.stringify(data),
+      ])
+    ).rows[0].id;
+    const call = async (action, revision, payload, version = 1) =>
+      (
+        await db.query(
+          "select save_planning($1,$2,$3,$4,$5::jsonb,false) as state",
+          [id, action, revision, version, JSON.stringify(payload)],
+        )
+      ).rows[0].state;
+    const { demoVenueSearch } = await import("../src/lib/demo-venues.ts");
+    const { applyVenue } =
+      await import("../supabase/functions/_shared/planning-service.ts");
+    const search = demoVenueSearch({ version: 1, data }, "");
+    let s = await call("searchVenues", 0, { venueSearch: search });
+    assert.equal(s.venueSearch.scope, "nationwide");
+    const selection = {
+      venue: { ...search.options[0], name: "Forged venue" },
+      quantity: 2,
+      briefVersion: 999,
+      selectedAt: "2020-01-01T00:00:00Z",
+    };
+    s = await call("selectVenue", 1, { selectedVenue: selection });
+    assert.equal(s.selectedVenue.venue.name, search.options[0].name);
+    assert.equal(s.selectedVenue.briefVersion, 1);
+    await assert.rejects(
+      () =>
+        call("selectVenue", 2, {
+          selectedVenue: { ...selection, quantity: 0 },
+        }),
+      /Invalid planning data/,
+    );
+    await assert.rejects(
+      () =>
+        call("selectVenue", 2, {
+          selectedVenue: { ...selection, venue: { id: crypto.randomUUID() } },
+        }),
+      /Venue not found/,
+    );
+    const concepts = [1, 2].map((i) => ({
+      id: "72000000-0000-4000-8000-00000000000" + i,
+      title: "Concept " + i,
+      theme: "Theme",
+      activities: ["Welcome"],
+      assumptions: ["Pending"],
+    }));
+    s = await call("generateConcepts", 2, { concepts });
+    s = await call("select", 3, { conceptId: concepts[0].id });
+    const proposal = {
+      title: "Proposal",
+      objectives: "Manual objectives",
+      audience: "Team",
+      theme: "Manual theme",
+      agenda: "Welcome",
+      assumptions: "Pending",
+      budget: baselineBudget(data.budget, data.attendees),
+    };
+    await assert.rejects(
+      () =>
+        call("generateProposal", 4, {
+          data: { ...proposal, budget: { ...proposal.budget, items: [] } },
+        }),
+      /Invalid planning data/,
+    );
+    s = await call("generateProposal", 4, {
+      data: applyVenue(proposal, s.selectedVenue, data),
+    });
+    assert.equal(s.proposal.version, 1);
+    const original = structuredClone(s.proposal);
+    const selected = {
+      venue: search.options[1],
+      quantity: 1,
+      briefVersion: 1,
+      selectedAt: new Date().toISOString(),
+    };
+    const updated = applyVenue(s.proposal.data, selected, data);
+    await assert.rejects(
+      () =>
+        call("selectVenue", 5, {
+          selectedVenue: selected,
+          data: { ...updated, theme: "Overwrite" },
+        }),
+      /preserve saved proposal/,
+    );
+    const wrong = structuredClone(updated);
+    wrong.budget.items.find((i) => i.category === "catering").unitCost++;
+    await assert.rejects(
+      () => call("selectVenue", 5, { selectedVenue: selected, data: wrong }),
+      /preserve other budget/,
+    );
+    s = await call("selectVenue", 5, {
+      selectedVenue: selected,
+      data: updated,
+    });
+    assert.equal(s.proposal.version, 2);
+    assert.deepEqual(s.history[0], original);
+    assert.equal(s.proposal.data.theme, "Manual theme");
+    assert.equal(
+      s.proposal.data.budget.items.find((i) => i.category === "venue").unitCost,
+      search.options[1].price.max,
+    );
+    s = await call("saveProposal", 6, {
+      data: { ...s.proposal.data, venue: selection },
+    });
+    assert.equal(s.proposal.data.venue.venue.name, search.options[1].name);
+    await db.query("select save_brief($1::jsonb,$2,1)", [
+      JSON.stringify({ ...data, venue: "TP.HCM" }),
+      id,
+    ]);
+    await assert.rejects(
+      () =>
+        call("selectVenue", 7, { selectedVenue: selected, data: updated }, 2),
+      /Brief changed/,
+    );
+  } finally {
     await db.close();
   }
 });

@@ -1,3 +1,5 @@
+import BudgetEditor from "./BudgetEditor";
+import VenuePicker from "./VenuePicker";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { api, liveMode, SessionExpiredError } from "../lib/api";
 import {
@@ -9,7 +11,10 @@ import {
   type ProposalData,
 } from "../../supabase/functions/_shared/planning";
 import type { Brief } from "../../supabase/functions/_shared/contracts";
-const labels: Record<keyof ProposalData, string> = {
+const labels: Record<
+  "title" | "objectives" | "audience" | "theme" | "agenda" | "assumptions",
+  string
+> = {
   title: "Proposal title",
   objectives: "Objectives",
   audience: "Audience",
@@ -91,7 +96,7 @@ export default function PlanningPanel({
       const s = planningSchema.parse(await api.planning(input));
       if (mounted.current) {
         setState(s);
-        setDraft(s.proposal?.data ?? null);
+        if (input.action !== "searchVenues") setDraft(s.proposal?.data ?? null);
         setSnapshot(null);
         setNotice(
           input.action === "load"
@@ -257,6 +262,40 @@ export default function PlanningPanel({
       >
         {state?.concepts.length ? "Regenerate concepts" : "Generate concepts"}
       </button>
+      <VenuePicker
+        brief={brief}
+        search={state?.venueSearch ?? null}
+        selected={state?.selectedVenue ?? null}
+        busy={busy || !state || !!confirmation}
+        onSearch={(preferences) => {
+          if (state)
+            void execute({
+              action: "searchVenues",
+              briefId: brief.id,
+              briefVersion: brief.version,
+              expectedRevision: state.revision,
+              preferences,
+            });
+        }}
+        onSelect={(venueId, quantity) => {
+          if (!state) return;
+          const select = () =>
+            void execute({
+              action: "selectVenue",
+              briefId: brief.id,
+              briefVersion: brief.version,
+              expectedRevision: state.revision,
+              venueId,
+              quantity,
+            });
+          if (state.proposal || dirty)
+            ask(
+              "Chọn địa điểm này sẽ cập nhật chi phí thuê và lưu phiên bản proposal mới nếu có. Nội dung đã lưu khác được giữ nguyên; chỉnh sửa chưa lưu sẽ bị bỏ.",
+              select,
+            );
+          else select();
+        }}
+      />
       <div className="concept-grid" data-count={state?.concepts.length ?? 0}>
         {state?.concepts.map((c) => (
           <article
@@ -324,9 +363,9 @@ export default function PlanningPanel({
             onSubmit={(e) => {
               e.preventDefault();
               const parsed = proposalDataSchema.safeParse(draft);
-              if (!parsed.success) {
+              if (!parsed.success || !parsed.data.budget) {
                 setError(
-                  "Complete all proposal sections (maximum 5000 characters each).",
+                  "Check proposal sections and budget amounts, quantities and percentages before saving.",
                 );
                 return;
               }
@@ -347,13 +386,20 @@ export default function PlanningPanel({
                   maxLength={5000}
                   required
                   disabled={busy || !currentProposal || !!confirmation}
-                  value={draft[key as keyof ProposalData]}
+                  value={draft[key as keyof typeof labels]}
                   onChange={(e) =>
                     setDraft({ ...draft, [key]: e.target.value })
                   }
                 />
               </label>
             ))}
+            <BudgetEditor
+              budget={draft.budget}
+              limit={brief.data.budget}
+              attendees={brief.data.attendees}
+              disabled={busy || !currentProposal || !!confirmation}
+              onChange={(budget) => setDraft({ ...draft, budget })}
+            />
             <div className="form-actions">
               <button
                 className="button"

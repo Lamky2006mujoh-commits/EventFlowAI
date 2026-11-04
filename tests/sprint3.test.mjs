@@ -391,7 +391,7 @@ test("HTTP endpoint rejects missing/expired auth, missing membership and cross-a
     (await handle(http({ action: "load", briefId: "invalid" }))).status,
     400,
   );
-  assert.equal((await handle(http("a".repeat(40001)))).status, 413);
+  assert.equal((await handle(http("a".repeat(96001)))).status, 413);
   assert.equal(
     (await handle(http({}, { origin: "https://foreign.invalid" }))).status,
     403,

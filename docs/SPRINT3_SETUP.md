@@ -4,7 +4,7 @@ Requirements: [Sprint 2 and Sprint 3 backlog](https://docs.google.com/document/d
 
 ## Current deployed environment
 
-Project: **epmgcyiuloxtblzdrwsw**. Both `workspace` and `planning` are deployed; all five migrations have been applied and recorded. The local frontend uses this project at **http://localhost:5173/**. A review admin account and synthetic AI proposal remain available. Read its credentials from the ignored `.env.acceptance.local` file on this computer.
+Project: **epmgcyiuloxtblzdrwsw**. Both `workspace` and `planning` are deployed; all six migrations have been applied and recorded. The local frontend uses this project at **http://localhost:5173/**. A review admin account and synthetic AI proposal remain available. Read its credentials from the ignored `.env.acceptance.local` file on this computer.
 
 The previous project settings were backed up to `.env.previous-project.local`. Existing data/accounts were not migrated between projects.
 
@@ -22,7 +22,7 @@ Supabase supplies `SUPABASE_URL` and `SUPABASE_ANON_KEY`. The planning function 
 
 Deploy both `workspace` and `planning`. `supabase/config.toml` records `verify_jwt = false` because the legacy-only gateway cannot verify new signing keys. Both handlers verify the caller with Supabase Auth `getUser` and enforce membership before any protected access.
 
-For dashboard deployment, run `npm run bundle:edge`. Upload/paste the single-file functions in `dist-edge/workspace/index.ts` and `dist-edge/planning/index.ts`. Fresh projects can use the atomic `dist-edge/bootstrap-new-project.sql`; existing Sprint 2 projects must apply only the Sprint 3 migration. `npm run verify:edge` checks the generated bootstrap on PostgreSQL. Never rerun the fresh-project bootstrap on a populated schema.
+For dashboard deployment, run `npm run bundle:edge`. Upload/paste the single-file functions in `dist-edge/workspace/index.ts` and `dist-edge/planning/index.ts`. Fresh projects can use the atomic `dist-edge/bootstrap-new-project.sql`; existing projects must apply only migrations not already recorded (including `20261104090000_proposal_budget_venues.sql` for budgets/venues). `npm run verify:edge` checks the generated bootstrap on PostgreSQL. Never rerun the fresh-project bootstrap on a populated schema.
 
 ## Review workflow
 
@@ -68,3 +68,15 @@ The Gemini adapter uses the documented [structured output contract](https://ai.g
 `tests/live-sprint3.mjs` is an explicit live backend acceptance test. It requires `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and a matching `EVENTFLOW_LIVE_PROJECT_REF` supplied through a server-only process environment. It creates temporary isolation accounts, removes them afterward, and retains a synthetic review brief/admin. Never put these server credentials into Vite variables.
 
 Email rate limiting remains deferred at the user’s request. No signup/resend email test is required to review Sprint 3 with the provisioned review account.
+
+## Itemized budgets and venue search (2026-11-04)
+
+Proposals now include editable quantities, units, VND unit costs, line totals, contingency, additional tax, total and comparison with the brief ceiling. Existing snapshots stay unchanged; use **Thêm bảng ngân sách dự kiến** to upgrade a legacy proposal, then save a new version.
+
+The brief **Venue / proposed location** controls venue coverage: **TP.HCM** searches the entire city and nearby cities; **Việt Nam** searches nationwide. Search works before concept generation. Optional criteria narrow requirements. Results include capacity, rental/package unit, price provenance, included services, conditions and source links. Choose a result and rental quantity to update the venue cost. Selecting a venue preserves saved prose and other budget lines, appends a proposal version, and asks before discarding unsaved edits. Unknown prices retain a provisional allocation. No booking or availability confirmation is performed.
+
+Real search uses Gemini Google Search grounding followed by validated extraction. Published reference prices require evidence; unsupported references become **Cần liên hệ báo giá**. Demo venues and AI estimates are explicitly labeled. See [Google Search grounding](https://ai.google.dev/gemini-api/docs/google-search).
+
+**Current verification limit:** the supplied Gemini project returned HTTP 503, then HTTP 429 RESOURCE_EXHAUSTED during live venue-search checks. Real venue search and fresh budget generation need a rerun after Gemini quota is available. Do not interpret demo or mocked results as real rental quotes. Budget editing/saving/exporting on the deployed Supabase backend passed live browser testing.
+
+Run `npm run test:venues:live` for public synthetic TP.HCM search. Set `VENUE_TEST_AREA=Việt Nam` in the process environment to check nationwide search. This calls the provider and may consume quota; no credentials are written to evidence.

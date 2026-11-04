@@ -2179,3 +2179,243 @@ td {
     grid-template-columns: 1fr;
   }
 }
+
+.budget-editor,
+.venue-picker {
+  border-top: 1px solid #dce5df;
+  margin-top: 24px;
+  padding-top: 24px;
+  min-width: 0;
+}
+.budget-items {
+  display: grid;
+  gap: 12px;
+}
+.budget-item {
+  border: 1px solid #dce5df;
+  border-radius: 10px;
+  padding: 14px;
+  min-width: 0;
+  background: #fbfcfa;
+}
+.budget-item-heading {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) minmax(120px, 2fr) 28px;
+  gap: 10px;
+  align-items: center;
+}
+.budget-item-values {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+.budget-editor .field,
+.budget-editor input,
+.budget-editor select,
+.venue-picker input,
+.venue-picker .field {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+.budget-item .field {
+  margin-bottom: 10px;
+}
+.budget-line-total {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
+}
+.budget-line-total span {
+  font-size: 12px;
+  color: #66766d;
+}
+.budget-line-total strong {
+  font-size: 14px;
+}
+.budget-percentages {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+.budget-totals {
+  background: #f2f7ef;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.budget-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+}
+.budget-totals dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.budget-grand-total {
+  border-top: 1px solid #ccd9c5;
+  font-size: 17px;
+  margin-top: 5px;
+  padding-top: 14px !important;
+}
+.budget-over {
+  color: #a13827;
+}
+.budget-under {
+  color: #426b3a;
+}
+.venue-picker .planning-heading p {
+  margin: 8px 0;
+}
+.venue-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+.venue-card {
+  border: 1px solid #dce5df;
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.venue-card.chosen {
+  border: 2px solid #337456;
+  background: #f1f8f3;
+}
+.venue-card h4 {
+  font-size: 18px;
+  margin: 0 0 10px;
+}
+.venue-card h5 {
+  font-size: 13px;
+  margin: 16px 0 8px;
+}
+.venue-card p,
+.venue-card li {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.venue-card ul {
+  padding-left: 18px;
+}
+.venue-price {
+  font-weight: 700;
+  font-size: 16px !important;
+  color: #426b3a;
+}
+.venue-evidence {
+  font-size: 12px;
+  margin: 12px 0;
+  padding: 10px;
+  border-left: 3px solid #b9cda9;
+  background: #f6f8f3;
+}
+.venue-source-links {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  margin: 16px 0;
+}
+.venue-source-links a {
+  color: #426b3a;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+.venue-selection {
+  border-top: 1px solid #dce5df;
+  padding-top: 14px;
+}
+.venue-selection .button {
+  width: 100%;
+  white-space: normal;
+}
+.venue-selection input {
+  width: 100%;
+}
+.venue-filter {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  margin: 12px 0;
+}
+.venue-filter input {
+  width: auto;
+  flex: none;
+  margin-top: 3px;
+}
+.selected-venue-note {
+  padding: 14px;
+  background: #edf4e7;
+  border: 1px solid #d1e1c5;
+  border-radius: 10px;
+  margin: 16px 0;
+}
+.selected-venue-note p {
+  margin: 8px 0 0;
+}
+.venue-results-heading {
+  margin-top: 18px;
+}
+.venue-search-suggestions {
+  width: 100%;
+  height: 140px;
+  border: 0;
+  margin-top: 8px;
+}
+.budget-note span {
+  font-size: 12px;
+}
+.budget-editor .muted,
+.venue-picker > .muted {
+  font-size: 12px;
+  line-height: 1.6;
+}
+@media (max-width: 1150px) {
+  .venue-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 650px) {
+  .budget-item-heading {
+    grid-template-columns: minmax(0, 1fr) 28px;
+  }
+  .budget-item-heading > .field:nth-child(2) {
+    grid-column: 1/-1;
+    grid-row: 2;
+  }
+  .budget-item-heading > .text-button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .budget-item-values {
+    grid-template-columns: 1fr 1fr;
+  }
+  .budget-percentages {
+    grid-template-columns: 1fr;
+  }
+  .budget-totals {
+    padding: 12px;
+  }
+  .budget-totals > div {
+    flex-wrap: wrap;
+  }
+  .budget-item {
+    padding: 10px;
+  }
+  .venue-card {
+    padding: 12px;
+  }
+  .venue-grid {
+    grid-template-columns: 1fr;
+  }
+}

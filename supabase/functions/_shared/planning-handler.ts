@@ -1,3 +1,4 @@
+import { searchVenues } from "./venue-search.ts";
 import {
   emptyPlanning,
   planningRequestSchema,
@@ -39,7 +40,7 @@ export function createPlanningHandler(
       return respond({ error: "Sign in to continue." }, 401);
     try {
       const raw = await req.text();
-      if (raw.length > 40000)
+      if (raw.length > 96000)
         return respond({ error: "Request too large." }, 413);
       let json;
       try {
@@ -113,6 +114,11 @@ export function createPlanningHandler(
               env("GEMINI_MODEL") === "gemini-3.5-flash"
                 ? "minimal"
                 : undefined,
+          }),
+        (source, preferences) =>
+          searchVenues(source, preferences, {
+            apiKey: env("GEMINI_API_KEY") ?? "",
+            model: env("GEMINI_MODEL") ?? "",
           }),
       );
       const { data, error } = await client.rpc("save_planning", {

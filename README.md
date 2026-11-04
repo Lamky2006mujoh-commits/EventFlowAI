@@ -52,6 +52,8 @@ The first administrator must be explicitly provisioned by the project owner; the
 - **US-04:** Gemini concepts through an authenticated Edge Function; 2–3 structured concepts, Zod validation, bounded retries and controlled errors.
 - **US-05:** Compare themes, activities and assumptions; persist the selected concept.
 - **US-06:** Generate and edit proposal sections, append author/timestamp versions, explicitly confirm regeneration and retain manual edits in history.
+- **Ngân sách dự kiến:** phân bổ theo hạng mục, số lượng × đơn giá, dự phòng, thuế, tổng và cảnh báo vượt ngân sách; chỉnh sửa, lưu lịch sử và xuất file.
+- **Địa điểm:** tìm theo phạm vi trong brief (thành phố và lân cận hoặc toàn Việt Nam), xem giá có nguồn/ước tính/cần báo giá, điều kiện và sức chứa; lựa chọn để cập nhật chi phí thuê.
 - **S3-T01:** Automated workflow, provider failure, HTTP authorization and PostgreSQL RLS/RPC checks.
 - **US-07 (P1):** Export the latest saved proposal as UTF-8 text with title, content, version and status.
 - **Sprint 2 improvements:** Distinct messages for authentication/email rate limits and unconfirmed email; SQL security regression tests and mobile layout fixes.
@@ -82,4 +84,6 @@ CI runs unit/integration tests, PostgreSQL checks, lint, function type checks, p
 
 Browser checks: `npx playwright install chromium`, then `npm run test:e2e`. To use an installed browser instead, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its executable path.
 
-Live verification is complete on the new Supabase project: real Gemini generation, 12 backend checks, 10 anonymous checks and a real browser workflow. Use `npm run test:e2e:live` to repeat the browser check with the local review account. Email rate limiting is deferred as requested.
+The original Sprint 3 baseline was verified on the new Supabase project: real Gemini generation, 12 backend checks, 10 anonymous checks and a real browser workflow. Use `npm run test:e2e:live` to repeat the browser check with the local review account. Email rate limiting is deferred as requested.
+
+Budget/venue extension: 51 unit/integration/PostgreSQL checks, 8 browser scenarios and the live Supabase budget save/export/reload workflow are covered. Real Google-grounded venue search is currently blocked by Gemini quota (HTTP 429); provider-backed search and fresh AI budget generation must be rerun after quota recovery. See [extension results](docs/BUDGET_VENUES_TEST_REPORT.md).

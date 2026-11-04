@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { generateStructured } from "../supabase/functions/_shared/gemini.ts";
 import {
   conceptsSchema,
-  proposalDataSchema,
+  generatedProposalSchema,
 } from "../supabase/functions/_shared/planning.ts";
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey)
@@ -39,15 +39,17 @@ console.log(
     " valid concepts.",
 );
 const proposal = await generateStructured(
-  proposalDataSchema,
+  generatedProposalSchema,
   {
-    task: "Create a proposal with objectives, audience, theme, agenda and preliminary assumptions.",
+    task: "Create a concise proposal with objectives, audience, theme, agenda, assumptions and a detailed estimated VND budget covering venue, catering, production, decoration, staffing, marketing, transport, permits and other relevant costs. Include quantities, units, unit costs, contingency, tax and explicit quote/tax assumptions. Respect the total budget.",
     brief,
     concept: concepts.concepts[0],
   },
   { apiKey, model },
 );
-console.log("PASS: live Gemini generated all six valid proposal sections.");
+console.log(
+  "PASS: live Gemini generated all six valid proposal sections and an itemized budget.",
+);
 const evidence = {
   startedAt,
   completedAt: new Date().toISOString(),

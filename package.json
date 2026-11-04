@@ -15,7 +15,8 @@
     "bundle:edge": "node scripts/bundle-edge.mjs",
     "test:e2e:live": "playwright test --config=playwright.live.config.ts",
     "verify:edge": "npm run bundle:edge && node scripts/verify-edge-bundle.mjs",
-    "check:auth": "node --env-file=.env.local scripts/check-auth.mjs"
+    "check:auth": "node --env-file=.env.local scripts/check-auth.mjs",
+    "test:venues:live": "node --env-file=.env.gemini.local tests/live-venues.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

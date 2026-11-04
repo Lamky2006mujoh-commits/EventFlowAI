@@ -198,6 +198,9 @@ test("actual Gemini response can be reviewed, edited and exported in the UI", as
     evidence.concepts.length,
   );
   await page
+    .getByRole("button", { name: "Thêm bảng ngân sách dự kiến", exact: true })
+    .click();
+  await page
     .getByRole("textbox", { name: "Theme", exact: true })
     .fill("Human-reviewed: " + evidence.proposal.theme);
   await page.getByRole("button", { name: "Save new proposal version" }).click();
@@ -220,3 +223,120 @@ test("actual Gemini response can be reviewed, edited and exported in the UI", as
     fullPage: true,
   });
 });
+
+test("venue choice itemizes rental, preserves manual edits, exports costs and restores after reload", async ({
+  page,
+}) => {
+  await openBrief(page);
+  await page
+    .getByRole("textbox", { name: "Theme", exact: true })
+    .fill("Manual venue test theme");
+  await page.getByRole("button", { name: "Save new proposal version" }).click();
+  await page
+    .getByRole("textbox", { name: "Theme", exact: true })
+    .fill("Unsaved draft retained during search");
+  await page
+    .getByRole("button", { name: "Tìm địa điểm trên web", exact: true })
+    .click();
+  await expect(page.locator(".venue-card")).toHaveCount(3);
+  await expect(
+    page.getByRole("textbox", { name: "Theme", exact: true }),
+  ).toHaveValue("Unsaved draft retained during search");
+  await page.locator(".venue-card").first().getByRole("spinbutton").fill("2");
+  await page
+    .getByRole("button", { name: "Dùng địa điểm này", exact: true })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Confirm replacement" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Proposal · v3 · Draft" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Theme", exact: true }),
+  ).toHaveValue("Manual venue test theme");
+  await expect(
+    page.getByRole("spinbutton", { name: "Số lượng chi phí 1", exact: true }),
+  ).toHaveValue("2");
+  await expect(
+    page.getByRole("spinbutton", { name: "Đơn giá chi phí 1", exact: true }),
+  ).toHaveValue("12000000");
+  await page
+    .getByRole("spinbutton", { name: "Đơn giá chi phí 2", exact: true })
+    .fill("100000000");
+  await expect(page.locator(".budget-over")).toBeVisible();
+  await page.getByRole("button", { name: "Save new proposal version" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Proposal · v4 · Draft" }),
+  ).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export latest saved (.txt)" })
+    .click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream!) chunks.push(chunk);
+  const exported = Buffer.concat(chunks).toString();
+  expect(exported).toContain("Manual venue test theme");
+  expect(exported).toContain("24.000.000");
+  expect(exported).not.toContain("[object Object]");
+  await page.reload();
+  await page.getByText("Beyond the ordinary", { exact: true }).first().click();
+  await expect(page.locator(".selected-venue-note")).toContainText("2 ngày");
+  await page.screenshot({
+    path: "docs/previews/budget-venues-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator("body")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "docs/previews/budget-venues-mobile.png",
+    fullPage: true,
+  });
+});
+
+for (const [area, scope] of [
+  ["TP.HCM", "Tìm toàn khu vực và các thành phố lân cận"],
+  ["Việt Nam", "Tìm trên toàn Việt Nam"],
+])
+  test(
+    "venue search before concepts respects brief area: " + area,
+    async ({ page }) => {
+      await page.goto("/");
+      await page.getByRole("button", { name: "Enter demo workspace" }).click();
+      await page
+        .getByText("Beyond the ordinary", { exact: true })
+        .first()
+        .click();
+      await page
+        .getByRole("button", { name: "Edit current brief", exact: true })
+        .click();
+      await page
+        .getByLabel("Venue / proposed location *", { exact: true })
+        .fill(area);
+      await page
+        .getByRole("button", { name: "Save version 2", exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: "Turn your brief into a proposal" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: "Tìm và chọn địa điểm" }),
+      ).toContainText(scope);
+      await page
+        .getByRole("button", { name: "Tìm địa điểm trên web", exact: true })
+        .click();
+      await expect(page.locator(".venue-card")).toHaveCount(3);
+      await page
+        .getByRole("button", { name: "Dùng địa điểm này", exact: true })
+        .first()
+        .click();
+      await expect(page.locator(".selected-venue-note")).toBeVisible();
+      await expect(page.locator(".concept-card")).toHaveCount(0);
+    },
+  );

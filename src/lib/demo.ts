@@ -1,3 +1,5 @@
+import { baselineBudget } from "../../supabase/functions/_shared/budget.ts";
+import { demoVenueSearch } from "./demo-venues.ts";
 import {
   emptyPlanning,
   planningSchema,
@@ -151,8 +153,10 @@ export const demo = {
           theme: c.theme,
           agenda: c.activities.join("\n"),
           assumptions: c.assumptions.join("\n"),
+          budget: baselineBudget(brief.data.budget, brief.data.attendees),
         });
       },
+      async (source) => demoVenueSearch(source),
     );
     // Check again after the async generation boundary, including session and brief changes.
     const current = context();
@@ -166,7 +170,23 @@ export const demo = {
       throw new Error(
         "Planning or brief version conflict. Reload before saving.",
       );
-    if (input.action === "generateConcepts") {
+    if (input.action === "searchVenues")
+      state.venueSearch = payload!.venueSearch!;
+    else if (input.action === "selectVenue") {
+      state.selectedVenue = payload!.selectedVenue!;
+      if (payload!.data) {
+        state.proposal = {
+          data: payload!.data,
+          version: state.history.length + 1,
+          briefVersion: brief.version,
+          conceptId: state.selectedId!,
+          status: "Draft",
+          author: person.name,
+          createdAt: new Date().toISOString(),
+        };
+        state.history.push(state.proposal);
+      }
+    } else if (input.action === "generateConcepts") {
       state.concepts = payload!.concepts!;
       state.selectedId = null;
       state.briefVersion = brief.version;
