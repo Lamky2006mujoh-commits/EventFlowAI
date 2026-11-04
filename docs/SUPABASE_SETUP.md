@@ -52,6 +52,36 @@ Employees create and confirm their own accounts in the app. An agency administra
 
 One account belongs to one agency in this small-course implementation. Agency transfers, email invitations, and password recovery are outside this increment.
 
+## Signup fails for teammates
+
+Cloning the frontend does not clone Supabase or its email settings. All teammates configured with the same public project URL/key share the hosted Auth service and its email quotas. `.env.local` is intentionally ignored by Git and must be configured on each machine.
+
+Run this read-only check after configuring `.env.local`:
+
+```powershell
+npm run check:auth
+```
+
+It validates the public URL/key against Auth and reports whether email signup and confirmation are enabled. It never attempts signup or sends email. A successful connection check does not prove confirmation-email delivery works.
+
+The signup UI maps known Auth error codes to specific actions and keeps the entered password in memory after a failed attempt. It never displays raw backend error payloads or logs a password.
+
+| Error | Meaning | Fix |
+| --- | --- | --- |
+| `over_email_send_rate_limit` / HTTP 429 | The hosted project's confirmation-email quota was reached | Stop repeated attempts. Let the provider limit reset, configure custom SMTP for ongoing self-registration, or have the project owner provision known course accounts without sending invitations |
+| `email_address_not_authorized` | The built-in sender cannot deliver to the submitted address | Configure custom SMTP; the built-in service only sends to permitted organization-team addresses |
+| `email_not_confirmed` | Login was attempted before confirmation | Complete the confirmation email; if it was never delivered, fix email delivery or use owner-provisioned course accounts |
+| Signup/provider disabled | Project configuration rejects email signup | Review Authentication → Sign In / Providers |
+| Invalid project URL/key | The frontend cannot reach the intended Auth project | Correct the ignored `.env.local`, keep the URL/key from the same project, and restart Vite |
+
+For the one-day course, the project owner can use **Supabase Dashboard → Authentication → Users → Add user → Create new user** to provision known teammates. Use the auto-confirm option if shown and do not choose **Send invitation** when avoiding email delivery. Set each account's password privately with its owner; never commit or post passwords. Then an app administrator adds each account under **Members & roles**. A project-dashboard-created user still has no agency access until membership is assigned.
+
+For self-service signup with email confirmation, configure **Authentication → Email → SMTP Settings** (the exact navigation label can vary) with your email provider's host, port, username, password, and verified sender. Keep those credentials in Supabase's server-side settings, never in `VITE_` variables. Confirm delivery to a teammate and check the provider's sending quota. Do not add people to the Supabase organization merely to work around email restrictions; application membership is separate from project administration.
+
+Do not disable email confirmation as an automatic workaround. That stops proving ownership of submitted email addresses and changes the trust assumptions of member onboarding. Any course-only change to that setting must be an explicit project-owner decision.
+
+Sources: [Supabase test-auth guidance](https://supabase.com/docs/guides/auth/testing-auth-flows), [SMTP setup](https://supabase.com/docs/guides/auth/auth-smtp).
+
 Members can create and edit agency briefs and inspect preserved versions. Only administrators can permanently delete a brief and its history, after explicit UI confirmation.
 
 ## Verification

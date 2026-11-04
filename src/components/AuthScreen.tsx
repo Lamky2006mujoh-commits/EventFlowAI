@@ -19,7 +19,7 @@ export default function AuthScreen({
   notice,
 }: {
   onLogin: (email: string, password: string, persona: string) => void;
-  onRegister: (name: string, email: string, password: string) => Promise<void>;
+  onRegister: (name: string, email: string, password: string) => Promise<boolean>;
   busy: boolean;
   error: string;
   notice: string;
@@ -112,12 +112,12 @@ export default function AuthScreen({
                 setValidation(parsed.error.issues[0].message);
                 return;
               }
-              await onRegister(
+              const registered = await onRegister(
                 parsed.data.name,
                 parsed.data.email,
                 parsed.data.password,
               );
-              setPassword("");
+              if (registered) setPassword("");
             }}
           >
             {liveMode ? (

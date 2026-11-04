@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { authFailureMessage } from "./auth-errors.ts";
 import {
   registrationSchema,
   requestSchema,
@@ -59,10 +60,7 @@ export function createWorkspaceApi(
         email: email.trim(),
         password,
       });
-      if (error)
-        throw new Error(
-          "Sign-in failed. Check your email and password, then try again.",
-        );
+      if (error) throw new Error(authFailureMessage(error, "login"));
       try {
         return await api.load();
       } catch (error) {
@@ -85,10 +83,7 @@ export function createWorkspaceApi(
         password: input.password,
         options: { data: { display_name: input.name } },
       });
-      if (error)
-        throw new Error(
-          "Account creation failed. Check your details or contact your administrator.",
-        );
+      if (error) throw new Error(authFailureMessage(error, "signup"));
       // Registration never grants agency access or an administrator role.
       const { error: logoutError } = await client.auth.signOut({
         scope: "local",

@@ -23,6 +23,10 @@ VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_PUBLISHABLE_KEY
 
 Legacy `VITE_SUPABASE_ANON_KEY` is also supported. Missing/invalid live configuration shows a setup error and never falls back to simulated access. Never put a service-role key, secret key, or password in a `VITE_` variable.
 
+Each teammate must create their own ignored `.env.local`; Git does not distribute that file. After setting the shared project's public URL/key, run `npm run check:auth` to verify the connection and signup settings without creating an account or sending email. Restart Vite after editing environment variables.
+
+If registration fails, read the displayed Auth error code. `over_email_send_rate_limit` means the shared project's confirmation-email quota was reached, not that the Git clone is broken. See [signup troubleshooting](docs/SUPABASE_SETUP.md#signup-fails-for-teammates).
+
 ## Account workflow
 
 1. A new employee selects **Create an account**, enters their own name/email/password, and confirms the email sent by Supabase.

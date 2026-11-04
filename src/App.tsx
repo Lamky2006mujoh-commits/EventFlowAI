@@ -431,12 +431,15 @@ export default function App() {
         error={error}
         notice={notice}
         onRegister={async (name, email, password) => {
+          let registered = false;
           await run(async () => {
             await api.register(name, email, password);
+            registered = true;
             setNotice(
               "If your registration was accepted, confirm your email, then ask your agency administrator for access. You can then sign in here.",
             );
           });
+          return registered;
         }}
         onLogin={(email, password, persona) => {
           void run(async () => {

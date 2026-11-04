@@ -5,6 +5,7 @@ import {
   SessionExpiredError,
 } from "../src/lib/workspace-api.ts";
 import { resolveBackendConfig } from "../src/lib/config.ts";
+import { authFailureMessage } from "../src/lib/auth-errors.ts";
 import {
   briefChanges,
   briefDataSchema,
@@ -230,4 +231,73 @@ test("sign-out during a pending request cannot reopen protected workspace data",
   finish({ data: workspace("member"), error: null });
   await assert.rejects(() => pending, SessionExpiredError);
   unsubscribe();
+});
+test("signup explains the live project email-limit error without retrying or signing out", async () => {
+  const client = fakeClient();
+  let attempts = 0;
+  client.auth.signUp = async () => {
+    attempts++;
+    return {
+      error: {
+        code: "over_email_send_rate_limit",
+        status: 429,
+        message: "raw provider payload",
+      },
+    };
+  };
+  await assert.rejects(
+    () =>
+      createWorkspaceApi(client).register(
+        "New User",
+        "new@example.com",
+        "a-long-test-password",
+      ),
+    /confirmation-email limit.*over_email_send_rate_limit/,
+  );
+  assert.equal(attempts, 1);
+  assert.equal(
+    client.calls.some((call) => call[0] === "logout"),
+    false,
+  );
+});
+test("known signup failures explain the required provider or account action", () => {
+  for (const [code, expected] of [
+    ["email_address_not_authorized", /custom SMTP/],
+    ["email_not_confirmed", /Confirm your email/],
+    ["signup_disabled", /registration is disabled/],
+    ["email_provider_disabled", /registration is disabled/],
+    ["weak_password", /password policy/],
+  ])
+    assert.match(authFailureMessage({ code }, "signup"), expected);
+});
+test("unknown provider errors never expose internals and still distinguish rate/network/configuration failures", () => {
+  assert.match(
+    authFailureMessage({ status: 429 }, "signup"),
+    /limiting authentication requests/,
+  );
+  assert.match(
+    authFailureMessage({ status: 401 }, "signup"),
+    /matching project URL/,
+  );
+  assert.match(authFailureMessage({ status: 500 }, "signup"), /Auth logs/);
+  assert.match(
+    authFailureMessage({ name: "AuthRetryableFetchError" }, "signup"),
+    /could not be reached/,
+  );
+  const result = authFailureMessage(
+    { message: "sensitive upstream internals" },
+    "signup",
+  );
+  assert.ok(!result.includes("sensitive upstream internals"));
+});
+test("unconfirmed accounts receive confirmation guidance when signing in", async () => {
+  const client = fakeClient();
+  client.auth.signInWithPassword = async () => ({
+    error: { code: "email_not_confirmed", status: 400 },
+  });
+  await assert.rejects(
+    () => createWorkspaceApi(client).login("new@example.com", "password"),
+    /Confirm your email/,
+  );
+  assert.equal(client.calls.length, 0);
 });
