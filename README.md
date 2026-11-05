@@ -38,7 +38,7 @@ If registration fails, read the displayed Auth error code. `over_email_send_rate
 
 The first administrator must be explicitly provisioned by the project owner; there is no public bootstrap or automatic first-user-admin endpoint. See [Supabase setup](docs/SUPABASE_SETUP.md).
 
-Backlog Sprint 2 cập nhật theo code và các cải tiến: [xem tài liệu](docs/SPRINT2_BACKLOG.md).
+Updated Sprint 2 backlog reflecting the implemented fixes: [read the document](docs/SPRINT2_BACKLOG.md).
 
 ## Sprint 2 features
 

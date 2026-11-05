@@ -1,135 +1,163 @@
-# EventFlow AI Sprint 2 Backlog cập nhật
+# EventFlow AI Sprint 2 Updated Backlog
 
-Ngày cập nhật: **05/11/2026**. Đối chiếu với code đến commit [8305ac5](https://github.com/Lamky2006mujoh-commits/EventFlowAI/commit/8305ac5).
+Updated: **5 November 2026**. Implementation baseline: commit [8305ac5](https://github.com/Lamky2006mujoh-commits/EventFlowAI/commit/8305ac5).
 
-Sprint 2 cung cấp tài khoản, phân quyền theo agency và quản lý brief có lịch sử phiên bản. Bản cập nhật ghi nhận các cải tiến xác thực, thông báo lỗi, cấu hình Supabase, bảo vệ phiên, kiểm thử cách ly dữ liệu và hiển thị thay đổi của brief.
+Sprint 2 establishes authentication, agency access control, and client brief management with version history. This update records the implemented improvements to authentication errors, Supabase configuration, session handling, data isolation tests, and brief change tracking.
 
-**Kết luận:** “Hoàn thành kỹ thuật” nghĩa là đã có code và bằng chứng kiểm thử. Luồng đăng ký qua email chưa đóng toàn bộ vì sự cố gửi email xác nhận còn để lại theo yêu cầu. Chưa có xác nhận nghiệm thu PO trong hồ sơ hiện có.
+**Status interpretation:** “Technically complete” means implementation and test evidence are available. The registration flow is not fully closed because confirmation-email delivery remains deferred at the user's request. No Product Owner acceptance has been recorded in the available evidence.
 
-## Danh sách backlog
+## Backlog Summary
 
-| Mã        | Hạng mục                                       | Trạng thái cập nhật                                                   |
-| --------- | ---------------------------------------------- | --------------------------------------------------------------------- |
-| US-20     | Đăng ký, đăng nhập, đăng xuất và quản lý phiên | Hoàn thành code; chờ xác minh gửi email để đóng toàn bộ luồng đăng ký |
-| US-21     | Cách ly dữ liệu và phân quyền theo agency      | Hoàn thành kỹ thuật                                                   |
-| US-01     | Tạo và lưu client brief có kiểm tra dữ liệu    | Hoàn thành kỹ thuật                                                   |
-| US-02     | Sửa brief và bảo toàn lịch sử phiên bản        | Hoàn thành kỹ thuật                                                   |
-| S2-T01    | Hợp đồng dữ liệu, kiểm thử hồi quy và CI       | Hoàn thành kỹ thuật; kết quả CI từ xa cần xem theo từng commit        |
-| S2-P1-01  | Quản lý thành viên và vai trò                  | Hoàn thành kỹ thuật                                                   |
-| S2-P1-02  | Độ đầy đủ của brief và hỗ trợ giao diện        | Hoàn thành kỹ thuật                                                   |
-| S2-BUG-01 | Giới hạn hoặc không gửi được email xác nhận    | Chưa giải quyết; tạm hoãn theo yêu cầu                                |
+| ID        | Item                                                | Updated Status                                                                                                 |
+| --------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| US-20     | Registration, login, logout, and session management | Implementation complete; email-delivery verification remains pending before closing the full registration flow |
+| US-21     | Agency data isolation and access control            | Technically complete                                                                                           |
+| US-01     | Validated client brief creation and saving          | Technically complete                                                                                           |
+| US-02     | Brief editing and preserved version history         | Technically complete                                                                                           |
+| S2-T01    | Shared contracts, regression tests, and CI          | Technically complete; check remote CI results for each commit                                                  |
+| S2-P1-01  | Agency member and role management                   | Technically complete                                                                                           |
+| S2-P1-02  | Brief readiness and usability improvements          | Technically complete                                                                                           |
+| S2-BUG-01 | Confirmation-email delivery and rate-limit incident | Unresolved; deferred at the user's request                                                                     |
 
-S2-P1-01, S2-P1-02 và S2-BUG-01 là mã bổ sung của bản cập nhật này. Không bổ sung ước lượng, người phụ trách hoặc phê duyệt khi chưa được xác nhận.
+S2-P1-01, S2-P1-02, and S2-BUG-01 are supplemental identifiers introduced in this backlog update. Estimates, assignees, and approvals have not been inferred.
 
-## US-20 Quản lý tài khoản và phiên
+## US-01 Build Client Brief Creation Form
 
-**User story:** Là nhân viên agency, tôi muốn đăng nhập bằng tài khoản của mình và kết thúc phiên an toàn để sử dụng đúng workspace được cấp quyền.
+**User story:** As an event planner, I want to save event requirements as a brief with a unique ID so my agency can use and update it.
 
-**Tiêu chí nghiệm thu cập nhật**
+**Updated acceptance criteria**
 
-1. Admin và member dùng cùng luồng email/mật khẩu. Vai trò và agency lấy từ membership phía server; người đăng ký không tự chọn quyền admin hoặc agency.
-2. Đăng ký kiểm tra tên, email và mật khẩu từ 12 đến 128 ký tự; không tự cấp quyền workspace. Tài khoản phải được xác nhận và được admin thêm vào agency.
-3. Sai thông tin đăng nhập không mở workspace. Tài khoản chưa xác nhận email hoặc chưa có membership nhận thông báo phù hợp.
-4. Khôi phục phiên còn hiệu lực; đóng giao diện bảo vệ khi hết phiên hoặc đăng xuất. Phản hồi đang chạy không được mở lại dữ liệu sau logout.
-5. Nếu logout thất bại, hiển thị lỗi thay vì báo thành công. Luồng hiện tại đăng xuất phiên của trình duyệt đang dùng.
-6. Phân biệt lỗi giới hạn gửi email/yêu cầu, email chưa xác nhận, địa chỉ không được dịch vụ email cho phép, provider bị tắt, mật khẩu yếu, kết nối và cấu hình URL/key.
-7. Đăng ký thất bại giữ mật khẩu trong bộ nhớ form để người dùng sửa hoặc thử lại sau khi nguyên nhân được xử lý; không ghi mật khẩu hoặc hiển thị lỗi thô của provider.
-8. Cấu hình live không hợp lệ phải báo lỗi, không tự chuyển sang demo. Hỗ trợ publishable key và alias anon key cũ; URL/key phải cùng project.
+1. Require an event name, client, event type, valid date, venue or proposed area, attendee count, budget, and objectives.
+2. Validate event names at 3–160 characters, client names at 2–160, locations at 2–300, and objectives at 10–5,000. Event types must come from the supported list.
+3. Accept an integer attendee count from 1 to 100,000 and a finite budget greater than zero and no more than VND 1,000,000,000,000. The current implementation validates calendar dates; it does not require a future date.
+4. Allow audience and constraints to be empty, enforce their length limits, and identify them as information to clarify.
+5. Return a brief ID after a successful save and associate the record with the correct agency and server-derived author. Invalid data or failed saves must not report success or create false history.
+6. Accept a venue name, city, region, or country as the proposed location. Venue search using this field belongs to Sprint 3.
 
-**Đã cải tiến:** ánh xạ mã lỗi Auth thành hướng dẫn cụ thể; thêm kiểm tra cấu hình chỉ đọc bằng npm run check:auth; chặn phản hồi muộn sau logout; phân biệt mất phiên và mất membership.
+**Evidence:** shared frontend/backend Zod contracts; tests for required fields, dates, attendee and budget boundaries, failed saves, and access control.
 
-**Còn chờ:** nghiệm thu đăng ký → nhận email → xác nhận → cấp membership → đăng nhập. Tài khoản review tạo sẵn không chứng minh gửi email đã hoạt động.
+## US-02 Implement Brief Editing and Version History
 
-## US-21 Cách ly dữ liệu và phân quyền agency
+**User story:** As an agency member, I want to update briefs and inspect earlier versions so the team can trace changes and decisions.
 
-**User story:** Là thành viên agency, tôi chỉ truy cập dữ liệu của agency mình và thực hiện thao tác đúng vai trò.
+**Updated acceptance criteria**
 
-**Tiêu chí nghiệm thu cập nhật**
+1. Each saved update appends a snapshot with a version number, author, and timestamp. Earlier snapshots remain unchanged.
+2. Other authorized members of the same agency can edit the brief. The server determines authorship rather than trusting client-submitted author data.
+3. Show before/after values for changed fields; identify the first version as the initial creation.
+4. Reject a save based on an outdated version after another user has saved a newer version. Require a reload before retrying.
+5. Mark dependent planning output for review when the brief changes. Readiness checks use the current brief even while an older snapshot is displayed.
+6. Only administrators can delete a brief and its history after UI confirmation; other briefs remain unaffected.
 
-1. Backend xác minh Supabase Auth và membership trước khi đọc/ghi. Không tin agency hoặc role client gửi lên.
-2. RLS/RPC chặn truy cập brief, membership và lịch sử của agency khác, kể cả gọi API/RPC trực tiếp.
-3. Member được tạo, xem, sửa brief cùng agency. Chỉ admin quản lý membership/vai trò và xóa brief; xóa phải có xác nhận giao diện.
-4. Không tự nâng quyền, quản lý thành viên agency khác hoặc xóa/hạ quyền admin cuối cùng.
-5. Thu hồi membership làm mất quyền ở yêu cầu tiếp theo; không xóa tài khoản Auth khi chỉ gỡ membership.
-6. Anonymous, token thiếu/sai/hết hạn và ghi trực tiếp vào bảng được bảo vệ đều bị từ chối theo quyền server.
-7. Frontend không chứa service-role key/server secret; thông tin đăng nhập kiểm thử và môi trường riêng bị Git bỏ qua.
+**Evidence:** tests for immutable snapshots, attribution, field differences, same-agency edits, stale writes, and deletion permissions.
 
-**Bằng chứng:** kiểm thử PostgreSQL với RLS/RPC; bộ SQL security đã chạy trên Supabase thật ngày 04/11/2026 với fixture rollback; collection Postman cho hai agency.
+## US-20 Implement Authentication with Supabase Auth
 
-## US-01 Tạo và lưu client brief
+**User story:** As an agency employee, I want to sign in with my own account and end my session safely so I can access only the workspace assigned to me.
 
-**User story:** Là người lập kế hoạch, tôi muốn lưu thông tin sự kiện thành brief có mã định danh để nhóm cùng sử dụng.
+**Updated acceptance criteria**
 
-**Tiêu chí nghiệm thu cập nhật**
+1. Administrators and members use the same email/password login flow. Roles and agency access come from server-side membership; registration cannot grant an administrator role or select an agency.
+2. Validate registration name, email, and passwords of 12–128 characters. Registration alone grants no workspace access. Accounts must be confirmed and added to an agency by an administrator.
+3. Invalid credentials must not open the workspace. Unconfirmed accounts and accounts without membership receive appropriate guidance.
+4. Restore valid sessions and close protected views when a session expires or is signed out. A pending response must not reopen protected data after logout.
+5. Report logout failures instead of claiming success. The implemented logout ends the session in the current browser.
+6. Distinguish confirmation-email limits, authentication request limits, unconfirmed email, unauthorized recipient addresses, disabled providers, weak passwords, connection failures, and invalid URL/key configuration.
+7. Preserve the entered password in form memory after failed registration so the user can correct or retry after the cause is resolved. Do not log passwords or display raw provider error payloads.
+8. Invalid live configuration must show an error rather than silently falling back to demo access. Support the publishable key and legacy anon-key alias; the URL and key must identify the same project.
 
-1. Bắt buộc có tên sự kiện, khách hàng, loại sự kiện, ngày hợp lệ, địa điểm/khu vực, số khách, ngân sách và mục tiêu.
-2. Tên sự kiện 3–160 ký tự; khách hàng 2–160; địa điểm 2–300; mục tiêu 10–5.000. Loại sự kiện thuộc danh sách hỗ trợ.
-3. Số khách nguyên từ 1 đến 100.000; ngân sách hữu hạn, lớn hơn 0, tối đa 1.000.000.000.000 VND. Code hiện tại kiểm tra ngày hợp lệ, không bắt buộc ngày tương lai.
-4. Audience/constraints được để trống nhưng có giới hạn độ dài và gợi ý bổ sung thông tin.
-5. Lưu thành công trả brief ID, đúng agency/tác giả. Dữ liệu không hợp lệ hoặc lỗi lưu không được báo thành công hay tạo lịch sử giả.
-6. Địa điểm có thể là venue, thành phố, vùng hoặc quốc gia; chức năng tìm địa điểm từ trường này thuộc Sprint 3.
+**Implemented improvements:** actionable Auth error mapping; the read-only npm run check:auth configuration check; rejection of late responses after logout; separate handling of session loss and agency-access revocation.
 
-**Bằng chứng:** Zod contracts dùng chung frontend/backend; kiểm thử dữ liệu, ngày, giới hạn khách/ngân sách, lỗi lưu và quyền truy cập.
+**Outstanding verification:** registration → email receipt → email confirmation → membership assignment → login. A pre-provisioned review account does not verify confirmation-email delivery. Track this work under S2-BUG-01.
 
-## US-02 Chỉnh sửa và lịch sử brief
+## S2-P1-02 Brief Readiness and Usability Improvements
 
-**User story:** Là thành viên agency, tôi muốn cập nhật brief và xem các bản trước để truy vết quyết định của nhóm.
+**User story:** As an event planner, I want to see which brief details still need clarification so I can improve the brief before planning.
 
-**Tiêu chí nghiệm thu cập nhật**
+**Updated acceptance criteria**
 
-1. Mỗi lần lưu cập nhật tạo snapshot mới có phiên bản, tác giả và thời gian; không ghi đè bản cũ.
-2. Thành viên cùng agency có thể sửa theo quyền. Server xác định tác giả, không nhận tác giả giả từ client.
-3. Bảng thay đổi hiển thị giá trị trước/sau của trường đã sửa; bản đầu ghi nhận tạo mới.
-4. Yêu cầu dùng version cũ bị từ chối nếu đã có người lưu mới; phải tải lại trước khi lưu tiếp.
-5. Brief thay đổi đánh dấu đầu ra phụ thuộc cần rà soát. Readiness luôn đánh giá bản hiện tại, kể cả khi xem lịch sử.
-6. Chỉ admin được xóa brief cùng lịch sử sau xác nhận; không ảnh hưởng brief khác.
+1. Evaluate the latest saved brief for missing audience and planning constraints.
+2. Identify each missing field and provide a relevant clarification prompt.
+3. Show the ready state when the checked fields are filled; evaluate the current brief even when an older version is being inspected.
+4. Treat readiness as an information-completeness check. It must not imply supplier confirmation, event feasibility, or approval.
 
-**Bằng chứng:** kiểm thử snapshot, tác giả/thời gian, thay đổi trước/sau, sửa cùng agency, xung đột và quyền xóa.
+**Evidence:** readiness tests cover incomplete and complete briefs. Version-aware readiness behavior is documented in the interface.
 
-## S2-T01 Hợp đồng dữ liệu và kiểm thử
+## S2-P1-01 Agency Member and Role Management
 
-Đã dùng chung Zod cho request/data/response; bổ sung unit/integration test, PostgreSQL với migration thật, SQL security, Postman và GitHub Actions cho test, lint, kiểm tra kiểu, build và Chromium E2E.
+**User story:** As an agency administrator, I want to manage membership and roles so employees receive the appropriate access.
 
-| Thời điểm  | Kiểm tra                       | Kết quả và giới hạn                                                                   |
-| ---------- | ------------------------------ | ------------------------------------------------------------------------------------- |
-| 05/11/2026 | Xác thực và xử lý lỗi          | 14/14 đạt; không gửi email                                                            |
-| 05/11/2026 | Hồi quy brief Sprint 2         | 11/11 đạt                                                                             |
-| 05/11/2026 | PostgreSQL tích hợp            | 4/4 đạt; gồm security Sprint 2 và hồi quy Sprint 3 trên toàn bộ migration             |
-| 04/11/2026 | Toàn bộ unit/integration       | 51/51 đạt; tổng dự án, không phải 51 ca riêng Sprint 2                                |
-| 04/11/2026 | Trình duyệt                    | 8/8 demo E2E và 1/1 live E2E đạt; chủ yếu luồng Sprint 3, không thay nghiệm thu email |
-| 04/11/2026 | Anonymous và SQL security live | 10/10 anonymous checks và SQL security đạt theo báo cáo đã lưu                        |
+**Updated acceptance criteria**
 
-Lệnh chạy nhóm hồi quy ngày 05/11/2026:
+1. Only administrators can add members, change roles, or remove membership.
+2. Add only confirmed Auth accounts that do not already belong to another agency.
+3. New members start with the member role; promotion is a separate administrator action.
+4. Prevent members from promoting themselves or managing other members.
+5. Retain at least one administrator; reject removal or demotion of the last administrator.
+6. Reject changes to members of another agency.
+7. Removing membership revokes agency access on subsequent requests without deleting the Auth account.
+
+**Scope limits:** this implementation assigns one agency per account. Agency transfers, email invitations, and password recovery are outside this increment.
+
+**Evidence:** membership and role regression tests, server-side RPC checks, agency isolation tests, and membership-revocation checks.
+
+## US-21 Agency Data Isolation and Access Control
+
+**User story:** As an agency member, I want agency data protected by server-side authorization so users from other agencies cannot access it.
+
+**Updated acceptance criteria**
+
+1. Verify Supabase Auth identity and current membership before protected reads or writes. Never trust client-supplied agency or role metadata.
+2. Enforce agency boundaries for briefs, memberships, and version history through RLS and checked RPCs, including direct API/RPC requests.
+3. Permit authorized members to create, read, and edit agency briefs. Restrict administration and deletion to administrators.
+4. Reject anonymous access, missing/invalid/expired tokens, and unauthorized direct table writes.
+5. Revoke read/write access on the next request after membership removal.
+6. Keep service-role keys and server secrets out of the frontend. Exclude private environment files and review credentials from Git.
+
+**Evidence:** PostgreSQL RLS/RPC tests; the SQL security suite executed against live Supabase on 4 November 2026 with rolled-back fixtures; a two-agency Postman collection.
+
+## S2-T01 Shared Contracts and Regression Testing
+
+Implemented shared Zod request/data/response contracts, unit and integration tests, PostgreSQL tests with real migrations, SQL security checks, a Postman collection, and GitHub Actions for tests, lint, type checks, build, and Chromium E2E.
+
+| Date            | Check                                  | Result and Verification Boundary                                                                  |
+| --------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 5 November 2026 | Authentication and error handling      | 14/14 passed; no email sent                                                                       |
+| 5 November 2026 | Sprint 2 brief regression              | 11/11 passed                                                                                      |
+| 5 November 2026 | PostgreSQL integration                 | 4/4 passed; includes Sprint 2 security and Sprint 3 regression across all migrations              |
+| 4 November 2026 | Full unit/integration suite            | 51/51 passed across the project, not 51 Sprint 2-only tests                                       |
+| 4 November 2026 | Browser testing                        | 8/8 demo E2E and 1/1 live E2E passed; primarily Sprint 3 workflows, not email-delivery acceptance |
+| 4 November 2026 | Live anonymous and SQL security checks | 10/10 anonymous checks and SQL security passed according to the saved report                      |
+
+Repeat the regression group run on 5 November 2026:
 
 ```powershell
 node --test tests/auth.test.mjs tests/sprint2.test.mjs tests/database.test.mjs
 ```
 
-npm run check:auth không tạo tài khoản, không gửi email và không chứng minh thư đã đến hộp thư. Có cấu hình CI không đồng nghĩa mọi lần chạy từ xa đều thành công.
+The npm run check:auth command neither creates accounts nor sends email and cannot prove inbox delivery. A configured CI workflow does not establish that every remote run has passed.
 
-## Các hạng mục bổ sung P1
+## Other Implemented Usability Improvements
 
-**S2-P1-01 Quản lý thành viên:** admin thêm tài khoản đã xác nhận, chưa thuộc agency khác; thành viên mới bắt đầu với quyền member, nâng quyền là thao tác riêng. Hỗ trợ đổi vai trò/gỡ membership, giữ ít nhất một admin. Chuyển agency, email invitation và khôi phục mật khẩu chưa thuộc increment này.
+The interface provides before/after brief comparisons and layouts suitable for smaller screens. These improvements support the relevant stories; they do not introduce additional story IDs or change approval status.
 
-**S2-P1-02 Hỗ trợ người dùng:** readiness theo độ đầy đủ, gợi ý audience/constraints còn thiếu, xem thay đổi phiên bản và bố cục màn hình nhỏ. “Ready for planning” không khẳng định sự kiện khả thi hoặc được phê duyệt.
+## S2-BUG-01 Confirmation Email Follow-up
 
-## S2-BUG-01 Email xác nhận còn mở
+**Observed issue:** registration can encounter over_email_send_rate_limit, HTTP 429, or recipient restrictions from the email provider. Machines using the same Supabase project share its Auth service limits; cloning Git does not create a separate Auth service.
 
-**Hiện tượng:** có thể gặp over_email_send_rate_limit, HTTP 429 hoặc giới hạn địa chỉ gửi của dịch vụ. Các máy dùng cùng Supabase project cùng chịu giới hạn; clone Git không tạo dịch vụ Auth riêng.
+**Implemented handling:** distinguish error codes, provide actionable guidance, preserve form input after errors, avoid automatic email resends, and document configuration and connection checks.
 
-**Đã làm:** phân biệt mã lỗi, hướng dẫn xử lý, giữ dữ liệu form khi lỗi, không tự gửi lại email; bổ sung tài liệu và kiểm tra kết nối.
+**Still unresolved:** provider delivery configuration or capacity, actual email receipt, and the complete confirmation flow. SMTP, quotas, and email-confirmation requirements have not been changed to claim resolution. The incident remains deferred at the user's request.
 
-**Chưa giải quyết:** khả năng gửi thư của provider, nhận thư thật và xác nhận email trọn luồng. Không thay đổi SMTP, quota hoặc tắt xác nhận email để coi lỗi đã hết. Giữ tạm hoãn theo yêu cầu người dùng.
+**Closure criteria:** coordinate one agreed test account and record the project, attempt time, provider response, email receipt time, and confirmation/login outcome. Do not repeatedly register or resend. After successful acceptance, update this issue and the outstanding verification under US-20.
 
-**Điều kiện đóng:** phối hợp một lượt thử với tài khoản thống nhất; ghi project, thời điểm, phản hồi provider, thời điểm nhận thư và kết quả xác nhận/đăng nhập. Không đăng ký hoặc resend liên tục. Sau nghiệm thu, cập nhật S2-BUG-01 và phần còn chờ của US-20.
+## Sprint 3 Boundary and References
 
-## Ranh giới Sprint 3 và tham chiếu
+Concept generation and selection, proposals, TXT export, itemized proposal budgets, and venue search/selection with rental prices and conditions belong to Sprint 3. Gemini quota is separate from the Sprint 2 Auth email incident.
 
-Concept, lựa chọn concept, proposal, xuất TXT, ngân sách chi tiết và tìm/chọn địa điểm có giá/điều kiện thuộc Sprint 3. Quota Gemini không phải lỗi email Auth Sprint 2.
-
-- [Mã nguồn](https://github.com/Lamky2006mujoh-commits/EventFlowAI)
-- [Hướng dẫn Supabase và xử lý đăng ký](SUPABASE_SETUP.md)
-- [Báo cáo triển khai và kiểm thử đã lưu](SPRINT3_TEST_REPORT.md)
-- [Kết quả phần ngân sách và địa điểm](BUDGET_VENUES_TEST_REPORT.md)
-- Kiểm thử: tests/auth.test.mjs, tests/sprint2.test.mjs, tests/database.test.mjs và tests/database-security.sql.
-- API cách ly agency: api-tests/postman/sprint2-agency-isolation.postman_collection.json.
+- [Project repository](https://github.com/Lamky2006mujoh-commits/EventFlowAI)
+- [Supabase configuration and registration troubleshooting](SUPABASE_SETUP.md)
+- [Saved deployment and test report](SPRINT3_TEST_REPORT.md)
+- [Budget and venue extension results](BUDGET_VENUES_TEST_REPORT.md)
+- Tests: tests/auth.test.mjs, tests/sprint2.test.mjs, tests/database.test.mjs, and tests/database-security.sql.
+- Agency-isolation API checks: api-tests/postman/sprint2-agency-isolation.postman_collection.json.
