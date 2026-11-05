@@ -26,20 +26,28 @@ For a real AI demo against the existing shared Supabase project, teammates do
 keys from the project's server-side secrets. Each teammate should:
 
 1. Clone the delivery branch and run `npm ci` with Node 24 or newer.
-2. Copy `.env.example` to the ignored `.env.local` and configure:
-
-   ```dotenv
-   VITE_APP_MODE=supabase
-   VITE_SUPABASE_URL=https://YOUR_SHARED_PROJECT_REF.supabase.co
-   VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_SHARED_PUBLIC_PUBLISHABLE_KEY
-   ```
-
-3. Obtain the shared project's public URL/publishable key and the intended
-   agency registration code from its administrator. Register a personal account,
+2. Copy `.env.example` to the ignored `.env.local`. The example already contains
+   the shared project's public URL and publishable key; no provider key is needed.
+3. Obtain the intended agency registration code from its administrator. Register a personal account,
    confirm email and wait for administrator approval as a Member.
-4. Run `npm run dev`, open the printed URL, and sign in. Real AI/search requests
+4. Run `npm run dev -- --host 127.0.0.1 --port 5173 --strictPort`, open the printed URL, and sign in. Real AI/search requests
    use the shared backend's provider quotas and billing settings. Email delivery
    and provider availability remain subject to the documented live-test limits.
+
+Fresh clone on Windows PowerShell:
+
+```powershell
+git clone --branch codex/sprint3-demo-ready --single-branch https://github.com/Lamky2006mujoh-commits/EventFlowAI.git
+cd EventFlowAI
+npm ci
+Copy-Item .env.example .env.local
+npm run check:auth
+npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
+```
+
+Use the strict port so an occupied port does not silently switch to an origin
+outside the backend's allowed local origins. Same-agency accounts share agency
+records; this is a shared workspace, not an isolated database for every clone.
 
 Only the public Supabase configuration belongs in browser `VITE_` variables.
 Never put `GEMINI_API_KEY`, `TAVILY_API_KEY`, a Supabase secret/service-role key,

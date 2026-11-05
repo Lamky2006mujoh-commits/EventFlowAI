@@ -7,9 +7,16 @@ A React app connected to Supabase for agency-protected client briefs, Gemini con
 Use Node.js 24 or newer.
 
 ```powershell
-npm install
-npm run dev -- --host 127.0.0.1
+npm ci
+# Fresh clone only: .env.example contains the shared public Supabase config.
+Copy-Item .env.example .env.local
+npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
+
+Teammates use the deployed shared backend and do not need Gemini/Tavily keys or
+their own Supabase project. Register a personal account and obtain agency approval.
+Keep an existing `.env.local` if it already contains your intended configuration.
+See [shared demo setup](docs/SPRINT3_SETUP.md#teammate-setup-after-cloning).
 
 Open the URL printed by Vite (normally http://localhost:5173/). The current checkout's public configuration points to Supabase project `qazukdulzixiudzyrhdn`, verified on 5 November 2026. Sign in with your own confirmed agency account. Optional live-test credential files are ignored and are not distributed with the repository. Both administrators and members sign in with email/password. Their role comes from server-side agency membership, never a role selected on the login form.
 
