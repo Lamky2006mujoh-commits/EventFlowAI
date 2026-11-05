@@ -54,9 +54,9 @@ One account belongs to one agency in this small-course implementation. Agency tr
 
 ## Signup fails for teammates
 
-Cloning the frontend does not clone Supabase or its email settings. All teammates configured with the same public project URL/key share the hosted Auth service and its email quotas. `.env.local` is intentionally ignored by Git and must be configured on each machine.
+Cloning the frontend does not clone Supabase or its email settings. Fresh clones use the committed shared public URL/publishable key automatically, so teammates share the hosted Auth service and its email quotas without configuring `.env.local`. That ignored file is optional for a complete custom connection or explicit browser-only sample mode.
 
-Run this read-only check after configuring `.env.local`:
+Run this read-only check to verify the shared defaults or an optional `.env.local` override:
 
 ```powershell
 npm run check:auth

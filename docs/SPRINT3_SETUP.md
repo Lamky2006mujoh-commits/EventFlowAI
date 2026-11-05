@@ -26,8 +26,8 @@ For a real AI demo against the existing shared Supabase project, teammates do
 keys from the project's server-side secrets. Each teammate should:
 
 1. Clone the delivery branch and run `npm ci` with Node 24 or newer.
-2. Copy `.env.example` to the ignored `.env.local`. The example already contains
-   the shared project's public URL and publishable key; no provider key is needed.
+2. Run the frontend directly. Committed public defaults connect to the shared
+   project; no `.env.local`, backend setup or provider key is needed.
 3. Obtain the intended agency registration code from its administrator. Register a personal account,
    confirm email and wait for administrator approval as a Member.
 4. Run `npm run dev -- --host 127.0.0.1 --port 5173 --strictPort`, open the printed URL, and sign in. Real AI/search requests
@@ -40,7 +40,6 @@ Fresh clone on Windows PowerShell:
 git clone --branch codex/sprint3-demo-ready --single-branch https://github.com/Lamky2006mujoh-commits/EventFlowAI.git
 cd EventFlowAI
 npm ci
-Copy-Item .env.example .env.local
 npm run check:auth
 npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
@@ -50,6 +49,10 @@ outside the backend's allowed local origins. Same-agency accounts share agency
 records; this is a shared workspace, not an isolated database for every clone.
 
 Only the public Supabase configuration belongs in browser `VITE_` variables.
+The built-in defaults live in `src/lib/shared-backend.ts`. A complete custom
+URL/publishable-key pair in `.env.local` overrides them. Partial or blank
+connection overrides fail closed instead of mixing project values. `.env.example`
+is an optional override template, not a required setup step.
 Never put `GEMINI_API_KEY`, `TAVILY_API_KEY`, a Supabase secret/service-role key,
 or account passwords in Git, frontend variables, examples or screenshots.
 `.gitignore` excludes `.env.local` and other private environment files; this
@@ -133,7 +136,7 @@ Demo mode (`VITE_APP_MODE=demo`) uses clearly labeled sample templates. It never
 - Use existing, confirmed test accounts for repeated password login tests.
 - Coordinate signup/email tests through one owner; avoid repeated signup or resend requests for the same account.
 - HTTP 429 and Supabase email/request rate-limit codes now produce a service-limit message. Unconfirmed email has a separate message from incorrect credentials.
-- Run read-only anonymous checks with `node --env-file=.env.local tests/live-anonymous.mjs`.
+- Run read-only anonymous checks with `node --env-file-if-exists=.env.local tests/live-anonymous.mjs`.
 - The email delivery incident remains **pending** until a coordinated test confirms actual mailbox delivery. Record project, test time, provider response, delivery time and owner. Passing mocked rate-limit tests does not verify email delivery or resolve a provider quota.
 
 ## Automated checks
@@ -144,7 +147,7 @@ Run the complete local acceptance set with one command:
 npm run verify:sprint3
 ```
 
-To include read-only checks of the project in `.env.local`:
+To include read-only checks of the shared backend (or an optional complete override in `.env.local`):
 
 ```powershell
 npm run verify:sprint3 -- --live-readonly

@@ -82,16 +82,17 @@ const checks = [
     true,
   ],
   ["Signup approval browsers", [npm, "run", "test:e2e:onboarding"], true],
+  ["Fresh clone shared-backend routing", [npm, "run", "test:e2e:shared"], true],
 ];
 if (args.has("--live-readonly")) {
   checks.push(
     [
       "Live Auth configuration",
-      ["--env-file=.env.local", "scripts/check-auth.mjs"],
+      ["--env-file-if-exists=.env.local", "scripts/check-auth.mjs"],
     ],
     [
       "Live anonymous access denial",
-      ["--env-file=.env.local", "tests/live-anonymous.mjs"],
+      ["--env-file-if-exists=.env.local", "tests/live-anonymous.mjs"],
     ],
   );
 }

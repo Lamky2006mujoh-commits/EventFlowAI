@@ -5,6 +5,7 @@ import {
   SessionExpiredError,
 } from "../src/lib/workspace-api.ts";
 import { resolveBackendConfig } from "../src/lib/config.ts";
+import { sharedBackend } from "../src/lib/shared-backend.ts";
 import { authFailureMessage } from "../src/lib/auth-errors.ts";
 import {
   briefChanges,
@@ -83,7 +84,9 @@ function fakeClient(role = "member") {
 }
 test("real backend is default, legacy key works, invalid config fails closed", () => {
   assert.equal(resolveBackendConfig({}).mode, "supabase");
-  assert.ok(resolveBackendConfig({}).configurationError);
+  assert.equal(resolveBackendConfig({}).configurationError, null);
+  assert.equal(resolveBackendConfig({}).url, sharedBackend.url);
+  assert.equal(resolveBackendConfig({}).key, sharedBackend.key);
   assert.equal(
     resolveBackendConfig({
       VITE_SUPABASE_URL: "https://project.supabase.co",
@@ -101,6 +104,28 @@ test("real backend is default, legacy key works, invalid config fails closed", (
     resolveBackendConfig({ VITE_APP_MODE: "demo" }).configurationError,
     null,
   );
+});
+
+test("partial custom backend configuration fails closed instead of mixing shared project values", () => {
+  for (const overrides of [
+    { VITE_SUPABASE_URL: "https://other.supabase.co" },
+    { VITE_SUPABASE_PUBLISHABLE_KEY: "custom-key" },
+    { VITE_SUPABASE_ANON_KEY: "legacy-key" },
+    { VITE_SUPABASE_URL: "" },
+    { VITE_SUPABASE_PUBLISHABLE_KEY: "" },
+  ])
+    assert.ok(resolveBackendConfig(overrides).configurationError);
+  const custom = resolveBackendConfig({
+    VITE_SUPABASE_URL: " https://other.supabase.co ",
+    VITE_SUPABASE_PUBLISHABLE_KEY: " custom-key ",
+  });
+  assert.equal(custom.configurationError, null);
+  assert.equal(custom.url, "https://other.supabase.co");
+  assert.equal(custom.key, "custom-key");
+  assert.ok(
+    resolveBackendConfig({ VITE_APP_MODE: "invalid" }).configurationError,
+  );
+  assert.equal(resolveBackendConfig({ VITE_APP_MODE: "demo" }).mode, "demo");
 });
 test("admins and members authenticate identically; role comes from server membership", async () => {
   for (const role of ["admin", "member"]) {

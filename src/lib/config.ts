@@ -1,9 +1,22 @@
+import { sharedBackend } from "./shared-backend.ts";
+
 export function resolveBackendConfig(env: Record<string, string | undefined>) {
   const mode = env.VITE_APP_MODE || "supabase";
-  const url = env.VITE_SUPABASE_URL?.trim() || "";
-  const key =
-    (env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY)?.trim() ||
-    "";
+  // A custom connection is a pair. Never mix a custom project URL/key with
+  // defaults from another project, even when an override was left blank.
+  const customConnection = [
+    "VITE_SUPABASE_URL",
+    "VITE_SUPABASE_PUBLISHABLE_KEY",
+    "VITE_SUPABASE_ANON_KEY",
+  ].some((name) => env[name] !== undefined);
+  const url = customConnection
+    ? env.VITE_SUPABASE_URL?.trim() || ""
+    : sharedBackend.url;
+  const key = customConnection
+    ? (
+        env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY
+      )?.trim() || ""
+    : sharedBackend.key;
   let configurationError: string | null = null;
   if (mode !== "supabase" && mode !== "demo") {
     configurationError = "VITE_APP_MODE must be supabase or demo.";

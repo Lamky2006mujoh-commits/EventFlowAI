@@ -8,19 +8,18 @@ Use Node.js 24 or newer.
 
 ```powershell
 npm ci
-# Fresh clone only: .env.example contains the shared public Supabase config.
-Copy-Item .env.example .env.local
 npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 
 Teammates use the deployed shared backend and do not need Gemini/Tavily keys or
-their own Supabase project. Register a personal account and obtain agency approval.
+their own Supabase project. No `.env.local` is required for the shared backend.
+Register a personal account and obtain agency approval.
 Keep an existing `.env.local` if it already contains your intended configuration.
 See [shared demo setup](docs/SPRINT3_SETUP.md#teammate-setup-after-cloning).
 
 Open the URL printed by Vite (normally http://localhost:5173/). The current checkout's public configuration points to Supabase project `qazukdulzixiudzyrhdn`, verified on 5 November 2026. Sign in with your own confirmed agency account. Optional live-test credential files are ignored and are not distributed with the repository. Both administrators and members sign in with email/password. Their role comes from server-side agency membership, never a role selected on the login form.
 
-Configure `.env.local` with the project public values:
+Optional: configure a different backend in `.env.local` with both public values:
 
 ```dotenv
 VITE_APP_MODE=supabase
@@ -28,9 +27,9 @@ VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_PUBLISHABLE_KEY
 ```
 
-Legacy `VITE_SUPABASE_ANON_KEY` is also supported. Missing/invalid live configuration shows a setup error and never falls back to simulated access. Never put a service-role key, secret key, or password in a `VITE_` variable.
+Legacy `VITE_SUPABASE_ANON_KEY` is also supported. With no connection overrides, the app uses the committed shared public configuration. Incomplete or invalid overrides show a setup error rather than mixing project values or falling back to simulated access. Never put a service-role key, secret key, or password in a `VITE_` variable.
 
-Each teammate must create their own ignored `.env.local`; Git does not distribute that file. After setting the shared project's public URL/key, run `npm run check:auth` to verify the connection and signup settings without creating an account or sending email. Restart Vite after editing environment variables.
+Run `npm run check:auth` to verify the shared connection and signup settings without creating an account or sending email. `.env.local` is only needed for explicit overrides or browser-only sample mode; it is ignored by Git. Restart Vite after editing environment variables.
 
 If registration fails, read the displayed Auth error code. `over_email_send_rate_limit` means the shared project's confirmation-email quota was reached, not that the Git clone is broken. See [signup troubleshooting](docs/SUPABASE_SETUP.md#signup-fails-for-teammates).
 
@@ -86,7 +85,7 @@ proposal regeneration so the narrative can be adapted to the new venue.
 
 Run `npm run verify:sprint3` for all local checks, or
 `npm run verify:sprint3 -- --live-readonly` to also verify Auth settings and
-anonymous access denial against `.env.local`. Results, timings and a source
+anonymous access denial against the shared defaults or an optional `.env.local` override. Results, timings and a source
 fingerprint are written to `test-results/sprint3-verification.json`.
 See [current Sprint 3 execution evidence](docs/SPRINT3_EXECUTION_REPORT.md)
 for completed work and the remaining live-provider/email acceptance gates.
@@ -111,7 +110,7 @@ npm run build
 Read-only live anonymous/authentication checks:
 
 ```powershell
-node --env-file=.env.local tests/live-anonymous.mjs
+node --env-file-if-exists=.env.local tests/live-anonymous.mjs
 ```
 
 `tests/database-security.sql` verifies agency boundaries, immutable history, author attribution, stale writes, invalid input, role escalation, membership removal, and anonymous denial using temporary fixtures inside a transaction that is rolled back. Run it against a development project using its SQL Editor or the connected Supabase tool. It does not require or expose a user's password.

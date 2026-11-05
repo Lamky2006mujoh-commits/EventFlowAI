@@ -1,12 +1,12 @@
 // Live, read-only checks. Run with: node --env-file=.env.local tests/live-anonymous.mjs
 import assert from "node:assert/strict";
 import { createClient } from "@supabase/supabase-js";
-const url = process.env.VITE_SUPABASE_URL;
-const key =
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY;
-if (!url || !key)
-  throw new Error("Configure the Supabase public URL and key first.");
+import { resolveBackendConfig } from "../src/lib/config.ts";
+const { url, key, mode, configurationError } = resolveBackendConfig(
+  process.env,
+);
+if (configurationError || mode !== "supabase")
+  throw new Error(configurationError || "Live checks require Supabase mode.");
 const client = createClient(url, key, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
