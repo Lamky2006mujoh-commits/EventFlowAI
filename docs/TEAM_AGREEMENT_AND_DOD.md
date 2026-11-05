@@ -35,7 +35,7 @@ Daily Scrum focuses on progress toward the Sprint Goal and the next actionable p
 - The Product Owner clarifies product value, orders the Product Backlog and confirms story acceptance. Record the actual person and decision when available.
 - Developers select work according to capacity, own implementation and testing, review each other's changes and adapt the Sprint Backlog.
 - The Scrum Master facilitates the agreed process and helps expose and remove impediments.
-- AI agents assist the team under [PROJECT_RULE.md](../PROJECT_RULE.md). They are not the Product Owner, a human reviewer or an approver.
+- AI agents assist the team under [AGENTS.md](../AGENTS.md). They are not the Product Owner, a human reviewer or an approver.
 - Existing assignees, estimates and historical sprint labels are preserved unless the responsible team changes them. Unassigned values remain unassigned.
 - Product or technical changes that affect the Sprint Goal are discussed with the responsible people; no one silently adds unrelated scope.
 
@@ -189,4 +189,4 @@ For future revisions, record version, date, reason, affected rules and actual co
 | 1.0          | 5 November 2026 | Supplied transcription of team notes                                                             | Source marked confirmation pending |
 | 2.0 proposed | 5 November 2026 | Resolve schedule overlap; clarify parallel work, evidence, eight DoD checks and agent boundaries | Pending Scrum Team confirmation    |
 
-[Agent execution rules](../PROJECT_RULE.md) implement this workflow for coding agents. [Project DoD reference](PROJECT_DOD.md) points to this section rather than maintaining a competing checklist.
+[Agent execution rules](../AGENTS.md) implement this workflow for coding agents. [Project DoD reference](PROJECT_DOD.md) points to this section rather than maintaining a competing checklist.
