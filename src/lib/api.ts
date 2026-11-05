@@ -30,8 +30,13 @@ export const api = {
     if (liveMode) await backend().logout();
     else demo.logout();
   },
-  async register(name: string, email: string, password: string) {
-    return backend().register(name, email, password);
+  async register(
+    name: string,
+    email: string,
+    password: string,
+    agencyCode: string,
+  ) {
+    return backend().register(name, email, password, agencyCode);
   },
   onSessionEnd(listener: () => void) {
     return live ? live.onSessionEnd(listener) : () => {};
@@ -46,6 +51,12 @@ export const api = {
   async changeRole(...args: Parameters<typeof demo.changeRole>) {
     if (liveMode) await backend().changeRole(...args);
     else demo.changeRole(...args);
+  },
+  async signupQueue() {
+    return backend().signupQueue();
+  },
+  async reviewSignup(requestId: string, decision: "approve" | "reject") {
+    return backend().reviewSignup(requestId, decision);
   },
   async addMember(email: string, name: string, role: "admin" | "member") {
     return backend().addMember(email, name, role);

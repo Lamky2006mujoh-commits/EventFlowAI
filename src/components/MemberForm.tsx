@@ -21,10 +21,10 @@ export default function MemberForm({
         }
       }}
     >
-      <h3>Add a registered team member</h3>
+      <h3>Add an existing account</h3>
       <p className="muted">
-        Ask them to create an account and confirm their email first. New members
-        start with the Member role.
+        For older confirmed accounts without a signup request. Review new
+        registrations above. Added accounts start with the Member role.
       </p>
       <div className="form-grid">
         <label className="field">

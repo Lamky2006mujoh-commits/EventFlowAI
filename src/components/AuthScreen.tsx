@@ -19,7 +19,12 @@ export default function AuthScreen({
   notice,
 }: {
   onLogin: (email: string, password: string, persona: string) => void;
-  onRegister: (name: string, email: string, password: string) => Promise<boolean>;
+  onRegister: (
+    name: string,
+    email: string,
+    password: string,
+    agencyCode: string,
+  ) => Promise<boolean>;
   busy: boolean;
   error: string;
   notice: string;
@@ -28,6 +33,7 @@ export default function AuthScreen({
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [agencyCode, setAgencyCode] = useState("");
   const [persona, setPersona] = useState(demoPeople[0].id);
   const [validation, setValidation] = useState("");
   return (
@@ -107,6 +113,7 @@ export default function AuthScreen({
                 name,
                 email: email.trim(),
                 password,
+                agencyCode,
               });
               if (!parsed.success) {
                 setValidation(parsed.error.issues[0].message);
@@ -116,8 +123,12 @@ export default function AuthScreen({
                 parsed.data.name,
                 parsed.data.email,
                 parsed.data.password,
+                parsed.data.agencyCode,
               );
-              if (registered) setPassword("");
+              if (registered) {
+                setPassword("");
+                setRegistering(false);
+              }
             }}
           >
             {liveMode ? (
@@ -159,9 +170,27 @@ export default function AuthScreen({
                   />
                 </label>
                 {registering && (
+                  <label className="field">
+                    <span>Agency code</span>
+                    <input
+                      aria-label="Agency code"
+                      required
+                      minLength={16}
+                      maxLength={16}
+                      autoComplete="off"
+                      value={agencyCode}
+                      onChange={(e) =>
+                        setAgencyCode(e.target.value.toUpperCase())
+                      }
+                      placeholder="Ask your agency administrator"
+                    />
+                  </label>
+                )}
+                {registering && (
                   <p className="small-note">
                     Use at least 12 characters. Confirm your email after
-                    registering, then ask your agency administrator for access.
+                    registering. Your administrator will see your signup request
+                    and must approve Member access.
                   </p>
                 )}
               </>
@@ -226,7 +255,7 @@ export default function AuthScreen({
             <ShieldCheck size={20} />
             <p>
               {liveMode
-                ? "Registration never grants agency or administrator access automatically. An agency administrator must add your registered email."
+                ? "Registration never grants agency or administrator access automatically. Your agency administrator reviews your signup request before granting Member access."
                 : "Local demo data is stored in this browser and provides no security boundary. Use sample data only."}
             </p>
           </div>

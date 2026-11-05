@@ -4,7 +4,7 @@ import { readFile, readdir } from "node:fs/promises";
 const db = new PGlite();
 try {
   await db.exec(
-    "create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated,anon;grant execute on function auth.uid() to authenticated,anon;",
+    "create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,raw_user_meta_data jsonb not null default '{}'::jsonb);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated,anon;grant execute on function auth.uid() to authenticated,anon;",
   );
   await db.exec(
     await readFile(
@@ -26,10 +26,10 @@ try {
   assert.equal(
     (
       await db.query(
-        "select count(*)::int as count from pg_tables where schemaname='public' and tablename in ('agencies','agency_members','briefs','brief_versions','brief_planning') and rowsecurity",
+        "select count(*)::int as count from pg_tables where schemaname='public' and tablename in ('agencies','agency_members','briefs','brief_versions','brief_planning','agency_signup_settings','agency_signup_requests') and rowsecurity",
       )
     ).rows[0].count,
-    5,
+    7,
   );
   await db.exec("set role anon");
   await assert.rejects(

@@ -2419,3 +2419,60 @@ td {
     grid-template-columns: 1fr;
   }
 }
+
+.signup-review {
+  margin: 24px 0;
+  padding: 24px;
+  min-width: 0;
+}
+.signup-request {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid #e5e7eb;
+  overflow-wrap: anywhere;
+}
+.signup-request h4 {
+  margin: 0 0 8px;
+}
+.signup-request p {
+  margin: 6px 0;
+}
+.signup-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.signup-history {
+  margin-top: 24px;
+}
+.signup-history summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.signup-notification {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  border: 1px solid #c9dcc4;
+  border-radius: 12px;
+  background: #f1f6ef;
+}
+@media (max-width: 680px) {
+  .signup-request,
+  .signup-notification {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .signup-review {
+    padding: 16px;
+  }
+  .signup-actions .button {
+    flex: 1;
+  }
+}

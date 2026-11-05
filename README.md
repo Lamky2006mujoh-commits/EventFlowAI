@@ -29,12 +29,14 @@ If registration fails, read the displayed Auth error code. `over_email_send_rate
 
 ## Account workflow
 
-1. A new employee selects **Create an account**, enters their own name/email/password, and confirms the email sent by Supabase.
-2. Registration alone grants no agency access or admin privileges.
-3. An existing agency administrator opens **Members & roles** and adds the confirmed account's registered email and name. The account starts as a member.
-4. The employee signs in to access that agency's workspace. Members can create, view, and edit agency briefs and inspect version history.
-5. Administrators can also change roles and remove membership. The last administrator cannot be removed or demoted. Removal revokes subsequent backend data access without deleting the Auth account.
-6. **Sign out** ends the current browser session and clears the protected UI. Other-browser logout and expired sessions are handled too.
+The revised signup/approval flow requires the new migration and workspace function before rollout. See [Sprint 1 authentication backlog](docs/SPRINT1_BACKLOG.md) and [approval setup and test results](docs/SIGNUP_APPROVAL.md).
+
+1. An administrator shares the agency registration code shown under **Members & roles → Signup requests**.
+2. A new employee creates an account using that code, their name, email and password. A validated Auth signup records a pending request; no membership is granted.
+3. The administrator sees an in-app notification, pending count and review queue. The employee confirms their email.
+4. The administrator approves or rejects the request. Approval saves the **member** role and review attribution atomically; unconfirmed accounts cannot be approved.
+5. The approved member signs in to work on agency briefs. Pending or rejected users remain outside the workspace.
+6. Administrators may subsequently manage roles and membership, retaining at least one administrator. Logout and expired-session protection remain in effect.
 
 The first administrator must be explicitly provisioned by the project owner; there is no public bootstrap or automatic first-user-admin endpoint. See [Supabase setup](docs/SUPABASE_SETUP.md).
 

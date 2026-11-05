@@ -38,6 +38,8 @@ import {
 import { api, liveMode, SessionExpiredError } from "./lib/api";
 import AuthScreen from "./components/AuthScreen";
 import MemberForm from "./components/MemberForm";
+import SignupRequests from "./components/SignupRequests";
+import type { SignupQueue } from "../supabase/functions/_shared/contracts";
 import VersionChanges from "./components/VersionChanges";
 import "./App.css";
 
@@ -348,6 +350,55 @@ function BriefForm({
 
 export default function App() {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [signupState, setSignupState] = useState<{
+    userId: string;
+    data: SignupQueue;
+  } | null>(null);
+  const [signupError, setSignupError] = useState("");
+  const [signupRevision, setSignupRevision] = useState(0);
+  const signupQueue =
+    signupState && signupState.userId === workspace?.session.id
+      ? signupState.data
+      : null;
+  useEffect(() => {
+    const userId = workspace?.session.id;
+    if (!liveMode || !userId || workspace?.session.role !== "admin") return;
+    let active = true,
+      inFlight = false;
+    const load = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const data = await api.signupQueue();
+        if (active) {
+          setSignupState({ userId, data });
+          setSignupError("");
+        }
+      } catch (e) {
+        if (active) {
+          setSignupError(
+            e instanceof Error ? e.message : "Could not load signup requests.",
+          );
+          if (e instanceof SessionExpiredError) {
+            setWorkspace(null);
+            setSignupState(null);
+            setSignupError("");
+          }
+        }
+      } finally {
+        inFlight = false;
+      }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), 30000);
+    const focus = () => void load();
+    window.addEventListener("focus", focus);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", focus);
+    };
+  }, [workspace?.session.id, workspace?.session.role, signupRevision]);
   const [page, setPage] = useState<Page>("overview");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
@@ -365,6 +416,8 @@ export default function App() {
     const unsubscribe = api.onSessionEnd(() => {
       if (active) {
         setWorkspace(null);
+        setSignupState(null);
+        setSignupError("");
         setSelectedId(null);
         setPage("overview");
         setNotice("");
@@ -402,6 +455,8 @@ export default function App() {
     } catch (e) {
       if (e instanceof SessionExpiredError) {
         setWorkspace(null);
+        setSignupState(null);
+        setSignupError("");
         setSelectedId(null);
         setPage("overview");
       }
@@ -439,19 +494,21 @@ export default function App() {
         busy={busy}
         error={error}
         notice={notice}
-        onRegister={async (name, email, password) => {
+        onRegister={async (name, email, password, agencyCode) => {
           let registered = false;
           await run(async () => {
-            await api.register(name, email, password);
+            await api.register(name, email, password, agencyCode);
             registered = true;
             setNotice(
-              "If your registration was accepted, confirm your email, then ask your agency administrator for access. You can then sign in here.",
+              "If your registration was accepted, your agency administrator will see your pending request. Confirm your email and wait for approval before signing in.",
             );
           });
           return registered;
         }}
         onLogin={(email, password, persona) => {
           void run(async () => {
+            setSignupState(null);
+            setSignupError("");
             setWorkspace(await api.login(email, password, persona));
             setPage("overview");
           });
@@ -535,6 +592,16 @@ export default function App() {
             >
               <item.icon size={18} />
               {item.label}
+              {item.id === "members" &&
+                session.role === "admin" &&
+                !!signupQueue?.pendingCount && (
+                  <span
+                    className="nav-count"
+                    aria-label="Pending signup requests"
+                  >
+                    {signupQueue.pendingCount}
+                  </span>
+                )}
               {item.id === "briefs" && (
                 <span className="nav-count">{briefs.length}</span>
               )}
@@ -575,6 +642,8 @@ export default function App() {
                 void run(async () => {
                   await api.logout();
                   setWorkspace(null);
+                  setSignupState(null);
+                  setSignupError("");
                   setPage("overview");
                 });
               }}
@@ -669,6 +738,32 @@ export default function App() {
               {notice}
             </div>
           )}
+          {liveMode &&
+            session.role === "admin" &&
+            !!signupQueue?.pendingCount &&
+            page !== "members" && (
+              <div className="signup-notification" role="status">
+                <span>
+                  {signupQueue.pendingCount} new signup request
+                  {signupQueue.pendingCount === 1 ? "" : "s"} awaiting review.
+                </span>
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() => navigate("members")}
+                >
+                  Review signup requests
+                </button>
+              </div>
+            )}
+          {liveMode &&
+            session.role === "admin" &&
+            signupError &&
+            page !== "members" && (
+              <p className="error" role="alert">
+                Signup notifications unavailable: {signupError}
+              </p>
+            )}
           {page === "overview" && (
             <>
               <div className="overview-grid">
@@ -1166,6 +1261,29 @@ export default function App() {
                   </p>
                 </div>
               </div>
+              {session.role === "admin" && liveMode && (
+                <SignupRequests
+                  queue={signupError ? null : signupQueue}
+                  error={signupError}
+                  busy={busy}
+                  onReload={() => setSignupRevision((v) => v + 1)}
+                  onReview={async (id, decision) => {
+                    let saved = false;
+                    await run(async () => {
+                      await api.reviewSignup(id, decision);
+                      setSignupRevision((v) => v + 1);
+                      await refresh();
+                      setNotice(
+                        decision === "approve"
+                          ? "Signup approved. Member access saved."
+                          : "Signup rejected. Decision saved.",
+                      );
+                      saved = true;
+                    });
+                    return saved;
+                  }}
+                />
+              )}
               {session.role === "admin" && liveMode && (
                 <MemberForm
                   busy={busy}

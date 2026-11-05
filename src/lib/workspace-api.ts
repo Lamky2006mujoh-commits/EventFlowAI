@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { authFailureMessage } from "./auth-errors.ts";
 import {
   registrationSchema,
+  signupQueueSchema,
   requestSchema,
   workspaceSchema,
   type ApiRequest,
@@ -32,7 +33,7 @@ export function authErrorMessage(
   return authFailureMessage(error, registration ? "signup" : "login");
 }
 export function createWorkspaceApi(
-  client: Pick<SupabaseClient, "auth" | "functions">,
+  client: Pick<SupabaseClient, "auth" | "functions" | "rpc">,
 ) {
   let sessionRevision = 0;
   async function request(
@@ -54,9 +55,20 @@ export function createWorkspaceApi(
         const response = await error.context.json().catch(() => null);
         if (
           error.context.status === 403 &&
-          response?.error === "Ask your administrator to add you to an agency."
-        )
-          throw new AccessRevokedError();
+          [
+            "Ask your administrator to add you to an agency.",
+            "Your registration is awaiting administrator approval.",
+            "Your agency request was declined. Contact your agency administrator.",
+          ].includes(response?.error)
+        ) {
+          const denial = new AccessRevokedError();
+          if (
+            response?.error !==
+            "Ask your administrator to add you to an agency."
+          )
+            denial.message = response.error;
+          throw denial;
+        }
         if (typeof response?.error === "string") message = response.error;
       }
       throw new Error(message);
@@ -92,16 +104,36 @@ export function createWorkspaceApi(
       const { error } = await client.auth.signOut({ scope: "local" });
       if (error) throw new Error("Could not sign out. Please try again.");
     },
-    async register(name: string, email: string, password: string) {
+    async register(
+      name: string,
+      email: string,
+      password: string,
+      agencyCode: string,
+    ) {
       const input = registrationSchema.parse({
         name,
         email: email.trim(),
         password,
+        agencyCode,
       });
+      const eligibility = await client.rpc(
+        "validate_agency_registration_code",
+        { p_code: input.agencyCode },
+      );
+      if (eligibility.error)
+        throw new Error(
+          "Registration approval is not configured or cannot be reached. Ask your administrator to check the signup setup.",
+        );
+      if (eligibility.data !== true)
+        throw new Error(
+          "Invalid agency code. Ask your agency administrator for the current registration code.",
+        );
       const { error } = await client.auth.signUp({
         email: input.email,
         password: input.password,
-        options: { data: { display_name: input.name } },
+        options: {
+          data: { display_name: input.name, agency_code: input.agencyCode },
+        },
       });
       if (error) throw new Error(authFailureMessage(error, "signup"));
       // Registration never grants agency access or an administrator role.
@@ -139,6 +171,12 @@ export function createWorkspaceApi(
     },
     async remove(id: string) {
       await request({ action: "delete", id });
+    },
+    async signupQueue() {
+      return signupQueueSchema.parse(await request({ action: "signupQueue" }));
+    },
+    async reviewSignup(requestId: string, decision: "approve" | "reject") {
+      await request({ action: "reviewSignup", requestId, decision });
     },
     async changeRole(memberId: string, role: "admin" | "member") {
       await request({ action: "role", memberId, role });

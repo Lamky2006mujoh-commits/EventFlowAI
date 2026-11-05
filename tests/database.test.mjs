@@ -7,7 +7,7 @@ const migrations = new URL("../supabase/migrations/", import.meta.url);
 async function database() {
   const db = new PGlite();
   await db.exec(`create role anon;create role authenticated;create schema auth;
- create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
+ create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,raw_user_meta_data jsonb not null default '{}'::jsonb);
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  grant usage on schema auth to authenticated,anon;grant execute on function auth.uid() to authenticated,anon;`);
   for (const f of (await readdir(migrations))

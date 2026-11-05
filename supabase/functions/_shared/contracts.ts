@@ -68,9 +68,23 @@ export const registrationSchema = z.object({
   name: z.string().trim().min(2, "Enter your full name.").max(160),
   email: z.email(),
   password: z.string().min(12, "Use at least 12 characters.").max(128),
+  agencyCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(
+      /^[A-F0-9]{16}$/,
+      "Enter the 16-character agency code supplied by your administrator.",
+    ),
 });
 export const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("workspace") }),
+  z.object({ action: z.literal("signupQueue") }),
+  z.object({
+    action: z.literal("reviewSignup"),
+    requestId: z.uuid(),
+    decision: z.enum(["approve", "reject"]),
+  }),
   z.object({
     action: z.literal("save"),
     id: z.uuid().optional(),
@@ -127,3 +141,21 @@ export function readiness(data: BriefData) {
     });
   return missing;
 }
+
+export const signupQueueSchema = z.object({
+  registrationCode: z.string().regex(/^[A-F0-9]{16}$/),
+  pendingCount: z.number().int().nonnegative(),
+  requests: z.array(
+    z.object({
+      id: z.uuid(),
+      name: z.string(),
+      email: z.email(),
+      status: z.enum(["pending", "approved", "rejected"]),
+      emailConfirmed: z.boolean(),
+      createdAt: z.iso.datetime({ offset: true }),
+      reviewedAt: z.iso.datetime({ offset: true }).nullable(),
+      reviewerName: z.string().nullable(),
+    }),
+  ),
+});
+export type SignupQueue = z.infer<typeof signupQueueSchema>;

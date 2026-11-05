@@ -66,13 +66,13 @@ It validates the public URL/key against Auth and reports whether email signup an
 
 The signup UI maps known Auth error codes to specific actions and keeps the entered password in memory after a failed attempt. It never displays raw backend error payloads or logs a password.
 
-| Error | Meaning | Fix |
-| --- | --- | --- |
-| `over_email_send_rate_limit` / HTTP 429 | The hosted project's confirmation-email quota was reached | Stop repeated attempts. Let the provider limit reset, configure custom SMTP for ongoing self-registration, or have the project owner provision known course accounts without sending invitations |
-| `email_address_not_authorized` | The built-in sender cannot deliver to the submitted address | Configure custom SMTP; the built-in service only sends to permitted organization-team addresses |
-| `email_not_confirmed` | Login was attempted before confirmation | Complete the confirmation email; if it was never delivered, fix email delivery or use owner-provisioned course accounts |
-| Signup/provider disabled | Project configuration rejects email signup | Review Authentication → Sign In / Providers |
-| Invalid project URL/key | The frontend cannot reach the intended Auth project | Correct the ignored `.env.local`, keep the URL/key from the same project, and restart Vite |
+| Error                                   | Meaning                                                     | Fix                                                                                                                                                                                              |
+| --------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `over_email_send_rate_limit` / HTTP 429 | The hosted project's confirmation-email quota was reached   | Stop repeated attempts. Let the provider limit reset, configure custom SMTP for ongoing self-registration, or have the project owner provision known course accounts without sending invitations |
+| `email_address_not_authorized`          | The built-in sender cannot deliver to the submitted address | Configure custom SMTP; the built-in service only sends to permitted organization-team addresses                                                                                                  |
+| `email_not_confirmed`                   | Login was attempted before confirmation                     | Complete the confirmation email; if it was never delivered, fix email delivery or use owner-provisioned course accounts                                                                          |
+| Signup/provider disabled                | Project configuration rejects email signup                  | Review Authentication → Sign In / Providers                                                                                                                                                      |
+| Invalid project URL/key                 | The frontend cannot reach the intended Auth project         | Correct the ignored `.env.local`, keep the URL/key from the same project, and restart Vite                                                                                                       |
 
 For the one-day course, the project owner can use **Supabase Dashboard → Authentication → Users → Add user → Create new user** to provision known teammates. Use the auto-confirm option if shown and do not choose **Send invitation** when avoiding email delivery. Set each account's password privately with its owner; never commit or post passwords. Then an app administrator adds each account under **Members & roles**. A project-dashboard-created user still has no agency access until membership is assigned.
 
@@ -107,3 +107,7 @@ Import `api-tests/postman/sprint2-agency-isolation.postman_collection.json` into
 Supabase reports advisory 0029 for the six intentionally callable SECURITY DEFINER helpers/RPCs. Their design is deliberate: clients cannot write tables directly, so the atomic write functions derive identity from `auth.uid()`, check agency/role, and use an empty search path. Anonymous execution is explicitly revoked. The security tests exercise both direct RPC calls and RLS reads; UI restrictions are not the security boundary. Review any changes to those functions carefully.
 
 Advisor reference: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+
+## Signup approval revision 5 November 2026
+
+The latest registration workflow uses an agency code, persistent pending requests, administrator in-app notifications, fixed-Member approval and a review audit trail. This supersedes manual email entry for new registrations; manual adding remains only for legacy accounts without requests. Apply the new signup-approval migration and deploy workspace before rolling out the frontend. See [approval rollout and test results](SIGNUP_APPROVAL.md). This revision is locally verified and not yet deployed to live Supabase.

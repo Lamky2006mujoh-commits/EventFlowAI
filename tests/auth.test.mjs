@@ -40,6 +40,7 @@ function fakeClient(role = "member") {
   let authListener;
   const client = {
     calls,
+    rpc: async () => ({ data: true, error: null }),
     auth: {
       signInWithPassword: async (input) => {
         calls.push(["login", input.email]);
@@ -187,9 +188,13 @@ test("registration cannot submit a role or agency and clears auto-created sessio
     "New User",
     "new@example.com",
     "a-long-test-password",
+    "ABCDEF0123456789",
   );
   const signup = client.calls[0][1];
-  assert.deepEqual(signup.options.data, { display_name: "New User" });
+  assert.deepEqual(signup.options.data, {
+    display_name: "New User",
+    agency_code: "ABCDEF0123456789",
+  });
   assert.equal(signup.options.data.role, undefined);
   assert.deepEqual(client.calls[1], ["logout", "local"]);
   assert.equal(
@@ -251,6 +256,7 @@ test("signup explains the live project email-limit error without retrying or sig
         "New User",
         "new@example.com",
         "a-long-test-password",
+        "ABCDEF0123456789",
       ),
     /confirmation-email limit.*over_email_send_rate_limit/,
   );
@@ -300,4 +306,29 @@ test("unconfirmed accounts receive confirmation guidance when signing in", async
     /Confirm your email/,
   );
   assert.equal(client.calls.length, 0);
+});
+
+test("agency preflight rejects invalid codes or missing setup before any Auth signup", async () => {
+  for (const eligibility of [
+    { data: false, error: null },
+    { data: null, error: { message: "private database details" } },
+  ]) {
+    const client = fakeClient();
+    client.rpc = async (name, p) => {
+      assert.equal(name, "validate_agency_registration_code");
+      assert.equal(p.p_code, "ABCDEF0123456789");
+      return eligibility;
+    };
+    await assert.rejects(
+      () =>
+        createWorkspaceApi(client).register(
+          "New User",
+          "new@example.com",
+          "a-long-test-password",
+          "abcdef0123456789",
+        ),
+      eligibility.error ? /signup setup/ : /Invalid agency code/,
+    );
+    assert.equal(client.calls.length, 0);
+  }
 });

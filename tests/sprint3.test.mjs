@@ -465,6 +465,7 @@ test("Sprint 2 distinguishes email/request limits from invalid credentials and u
   );
   for (const method of ["login", "register"]) {
     const client = {
+      rpc: async () => ({ data: true, error: null }),
       auth: {
         signInWithPassword: async () => ({ error: { status: 429 } }),
         signUp: async () => ({ error: { code: "over_email_send_rate_limit" } }),
@@ -475,7 +476,12 @@ test("Sprint 2 distinguishes email/request limits from invalid credentials and u
       () =>
         method === "login"
           ? api.login("user@example.com", "pw")
-          : api.register("User Name", "user@example.com", "long-test-password"),
+          : api.register(
+              "User Name",
+              "user@example.com",
+              "long-test-password",
+              "ABCDEF0123456789",
+            ),
       method === "login"
         ? /limiting authentication requests/
         : /confirmation-email limit/,
