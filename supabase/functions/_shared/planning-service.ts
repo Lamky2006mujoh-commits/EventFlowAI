@@ -19,6 +19,7 @@ import {
   proposalLocationMatches,
 } from "./proposal-context.ts";
 import { GenerationError } from "./gemini.ts";
+import { englishPlanningText } from "./english.ts";
 export class PlanningError extends Error {
   status = 409;
 }
@@ -40,14 +41,18 @@ export function applyVenue(
     category: "venue" as const,
     description: v.name.slice(0, 300),
     quantity: v.price.max === null ? 1 : selected.quantity,
-    unit: v.price.max === null ? "khoản dự trù" : venueUnitLabels[v.price.unit],
+    unit:
+      v.price.max === null
+        ? "provisional allocation"
+        : venueUnitLabels[v.price.unit],
     unitCost: v.price.max ?? fallback,
     notes: (
       (v.price.kind === "reference"
-        ? "Giá tham khảo từ tìm kiếm, cần xác nhận. "
+        ? "Search reference price; confirmation required. "
         : v.price.kind === "estimate"
-          ? "Ước tính AI, chưa có báo giá. "
-          : "Giữ khoản dự trù; cần liên hệ để lấy báo giá. ") + v.price.notes
+          ? "AI estimate; no supplier quote yet. "
+          : "Retain provisional allocation; contact the venue for a quote. ") +
+      englishPlanningText(v.price.notes)
     ).slice(0, 1000),
   };
   if (existing >= 0) budget.items[existing] = item;
@@ -139,6 +144,7 @@ export async function preparePlanning(
     const result = await generate(conceptsSchema, {
       task: "Generate 2–3 distinct event concepts with themes, 3–5 activities and 2–4 explicit assumptions each. Keep each field concise, no more than 60 words per string. Respect the supplied location and any selected venue's facilities, capacity and conditions. Do not substitute another venue. Unknown facilities and availability must remain assumptions.",
       brief: { ...brief.data, venue: context.location },
+      outputLanguage: "English",
       selectedVenue: context.venue,
     });
     return {
@@ -174,6 +180,7 @@ export async function preparePlanning(
         "Use only the supplied brief.venue as the event location. The user-selected search venue takes precedence over the original search area. When no search venue is selected, the brief location is user-provided: retain it exactly, do not recommend or substitute alternatives. Build the theme, timed agenda, activities, logistics and budget around the selected concept and this location together. Keep the selected concept identity and intended experience, but rewrite any venue-specific wording or activities that conflict with the current location. Do not carry over previous venue names. Adapt concept activities to known venue conditions; disclose unknown facilities/capacity and never invent bookings, supplier quotes or availability.",
       brief: { ...brief.data, venue: context.location },
       concept: selected,
+      outputLanguage: "English",
       selectedVenue: venue,
     });
     const data = venue

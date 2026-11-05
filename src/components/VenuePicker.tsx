@@ -3,13 +3,16 @@ import type { Brief } from "../../supabase/functions/_shared/contracts";
 import {
   venueSearchArea,
   venueUnitLabels,
+  venueQuantityText,
   type VenueSearch,
   type SelectedVenue,
 } from "../../supabase/functions/_shared/venues";
+import { englishPlanningText } from "../../supabase/functions/_shared/english";
 const money = (n: number) =>
-  new Intl.NumberFormat("vi-VN", {
+  new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "VND",
+    currencyDisplay: "code",
     maximumFractionDigits: 0,
   }).format(n);
 const suggestionPrefix = `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.google.com data:; base-uri 'none'; form-action 'none';"><base target="_blank">`;
@@ -55,30 +58,30 @@ export default function VenuePicker({
             v.price.max * quantityFor(v) <= brief.data.budget)),
     ) ?? [];
   return (
-    <section className="venue-picker" aria-label="Tìm và chọn địa điểm">
+    <section className="venue-picker" aria-label="Find and select a venue">
       <div className="planning-heading">
         <div>
-          <h3>Tìm & đề xuất địa điểm</h3>
+          <h3>Find and compare venues</h3>
           <p>
             <strong>{area.area}</strong> ·{" "}
             {area.scope === "nationwide"
-              ? "Tìm trên toàn Việt Nam"
-              : "Tìm toàn khu vực và các thành phố lân cận"}
+              ? "Search across Vietnam"
+              : "Search the entire area and nearby cities"}
           </p>
           <p>
-            {brief.data.attendees.toLocaleString("vi-VN")} khách ·{" "}
-            {brief.data.eventType} · Ngày {brief.data.date}
+            {brief.data.attendees.toLocaleString("en-US")} people ·{" "}
+            {brief.data.eventType} · Date {brief.data.date}
           </p>
         </div>
       </div>
       <label className="field">
-        <span>Tiêu chí địa điểm bổ sung</span>
+        <span>Additional venue preferences</span>
         <input
-          aria-label="Tiêu chí địa điểm bổ sung"
+          aria-label="Additional venue preferences"
           maxLength={1000}
           value={preferences}
           disabled={busy}
-          placeholder="Ví dụ: ngoài trời, có bãi đỗ xe, cần màn hình LED…"
+          placeholder="For example: outdoor space, parking, or an LED screen…"
           onChange={(e) => setPreferences(e.target.value)}
         />
       </label>
@@ -88,24 +91,24 @@ export default function VenuePicker({
         disabled={busy}
         onClick={() => onSearch(preferences)}
       >
-        {search ? "Tìm lại địa điểm" : "Tìm địa điểm trên web"}
+        {search ? "Search venues again" : "Find venues on the web"}
       </button>
       <p className="muted">
-        Phạm vi lấy từ địa điểm trong brief. Giá có nguồn và giá ước tính được
-        gắn nhãn riêng; ngày trống, đặt cọc và phí phát sinh cần xác nhận với
-        địa điểm.
+        Search uses the location in your brief. Sourced prices and estimates are
+        labeled separately; confirm availability, deposits and additional fees
+        with the venue.
       </p>
       {selected && (
         <div className="selected-venue-note">
-          <strong>Địa điểm đã chọn: {selected.venue.name}</strong>
+          <strong>Selected venue: {selected.venue.name}</strong>
           <p>
-            {selected.venue.address} · {selected.quantity}{" "}
-            {venueUnitLabels[selected.venue.price.unit]}
+            {selected.venue.address} ·{" "}
+            {venueQuantityText(selected.quantity, selected.venue.price.unit)}
           </p>
           {selected.briefVersion !== brief.version && (
             <p className="error">
-              Brief đã thay đổi. Hãy tìm và chọn lại địa điểm cho phiên bản hiện
-              tại.
+              The brief changed. Search and select a venue again for the current
+              version.
             </p>
           )}
         </div>
@@ -113,12 +116,12 @@ export default function VenuePicker({
       {search && (
         <>
           <div className="venue-results-heading">
-            <p>{search.summary}</p>
+            <p>{englishPlanningText(search.summary)}</p>
             <span className="muted">
               {search.method === "demo"
-                ? "Dữ liệu mẫu, không phải báo giá thực tế"
-                : "Tìm trên web"}{" "}
-              · Kiểm tra {new Date(search.checkedAt).toLocaleString("vi-VN")}
+                ? "Sample data, not an actual quote"
+                : "Web search"}{" "}
+              · Checked {new Date(search.checkedAt).toLocaleString("en-US")}
             </span>
             <label className="venue-filter">
               <input
@@ -126,18 +129,20 @@ export default function VenuePicker({
                 checked={fitOnly}
                 onChange={(e) => setFitOnly(e.target.checked)}
               />{" "}
-              Chỉ hiện lựa chọn không vượt ngân sách và đủ sức chứa đã biết
+              Only show options within budget and without known capacity
+              shortfalls
             </label>
           </div>
           {stale && (
             <p className="review-note">
-              Kết quả thuộc phiên bản brief cũ. Tìm lại trước khi lựa chọn.
+              These results belong to an older brief version. Search again
+              before selecting.
             </p>
           )}
           {!results.length && (
             <p className="review-note">
-              Không có địa điểm phù hợp với bộ lọc hiện tại. Bỏ bộ lọc hoặc thử
-              tiêu chí rộng hơn.
+              No venues match the current filter. Clear the filter or broaden
+              your preferences.
             </p>
           )}
           <div className="venue-grid">
@@ -165,29 +170,29 @@ export default function VenuePicker({
                       }
                     >
                       {v.price.kind === "reference"
-                        ? "Giá tham khảo có nguồn"
+                        ? "Sourced reference price"
                         : v.price.kind === "estimate"
-                          ? "Ước tính AI"
-                          : "Cần liên hệ báo giá"}
+                          ? "AI estimate"
+                          : "Quote required"}
                     </span>
                   </div>
                   <p>{v.address}</p>
                   <p>
-                    <strong>Sức chứa: </strong>
+                    <strong>Capacity: </strong>
                     {v.capacity === null
-                      ? "Chưa công bố, cần xác nhận"
-                      : v.capacity.toLocaleString("vi-VN") + " khách"}
+                      ? "Not published; confirmation required"
+                      : v.capacity.toLocaleString("en-US") + " people"}
                     {v.capacity !== null &&
                       v.capacity < brief.data.attendees && (
                         <span className="field-error">
                           {" "}
-                          · Chưa đủ số khách trong brief
+                          · Below the brief attendee count
                         </span>
                       )}
                   </p>
                   <p className="venue-price">
                     {v.price.min === null
-                      ? "Chưa có giá công khai"
+                      ? "No public price"
                       : money(v.price.min) +
                         (v.price.max !== v.price.min
                           ? " – " + money(v.price.max!)
@@ -195,41 +200,43 @@ export default function VenuePicker({
                         " / " +
                         venueUnitLabels[v.price.unit]}
                   </p>
-                  <p>{v.price.notes}</p>
+                  <p>{englishPlanningText(v.price.notes)}</p>
                   {v.price.evidence && (
-                    <blockquote className="venue-evidence">
-                      {v.price.evidence}
-                    </blockquote>
+                    <details className="venue-evidence">
+                      <summary>Original source quote</summary>
+                      <blockquote>{v.price.evidence}</blockquote>
+                    </details>
                   )}
-                  <p>{v.suitability}</p>
+                  <p>{englishPlanningText(v.suitability)}</p>
                   {!!v.included.length && (
                     <>
-                      <h5>Dịch vụ bao gồm</h5>
+                      <h5>Included services</h5>
                       <ul>
                         {v.included.map((text, i) => (
-                          <li key={i}>{text}</li>
+                          <li key={i}>{englishPlanningText(text)}</li>
                         ))}
                       </ul>
                     </>
                   )}
-                  <h5>Điều kiện / cần xác nhận</h5>
+                  <h5>Conditions / to confirm</h5>
                   <ul>
                     {v.conditions.map((text, i) => (
-                      <li key={i}>{text}</li>
+                      <li key={i}>{englishPlanningText(text)}</li>
                     ))}
                   </ul>
                   <p className="muted">
-                    Chưa kiểm tra tình trạng trống hoặc đặt chỗ.
+                    Availability and booking have not been checked.
                   </p>
                   <div className="venue-source-links">
                     {v.sources.map((s, i) => (
                       <a
                         key={s.url + i}
                         href={s.url}
+                        title={s.title}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        Nguồn {i + 1}: {s.title || "Xem thông tin"}
+                        Source {i + 1}: View source
                       </a>
                     ))}
                     <a
@@ -240,14 +247,14 @@ export default function VenuePicker({
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Xem vị trí trên bản đồ
+                      View on map
                     </a>
                   </div>
                   <div className="venue-selection">
                     <label className="field">
-                      <span>Số lượng ({venueUnitLabels[v.price.unit]})</span>
+                      <span>Quantity ({venueUnitLabels[v.price.unit]})</span>
                       <input
-                        aria-label={"Số lượng thuê " + v.name}
+                        aria-label={"Rental quantity for " + v.name}
                         type="number"
                         min={1}
                         max={100000}
@@ -264,14 +271,14 @@ export default function VenuePicker({
                     </label>
                     <p>
                       {!validQuantity(quantity)
-                        ? "Nhập số lượng nguyên từ 1 đến 100.000 trước khi chọn."
+                        ? "Enter a whole-number quantity from 1 to 100,000 before selecting."
                         : total === null
-                          ? "Sẽ giữ khoản dự trù trong ngân sách, chờ báo giá."
-                          : "Dự trù theo mức cao: " + money(total)}
+                          ? "The provisional budget allocation will be retained until a quote is available."
+                          : "Estimate at the upper price: " + money(total)}
                     </p>
                     {total !== null && total > brief.data.budget && (
                       <p className="error">
-                        Riêng chi phí này đã vượt ngân sách brief.
+                        This venue cost alone exceeds the brief budget.
                       </p>
                     )}
                     <button
@@ -282,7 +289,7 @@ export default function VenuePicker({
                       }
                       onClick={() => onSelect(v.id, quantity)}
                     >
-                      {chosen ? "Đã chọn địa điểm" : "Dùng địa điểm này"}
+                      {chosen ? "Selected venue" : "Use this venue"}
                     </button>
                   </div>
                 </article>

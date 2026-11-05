@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { englishPlanningText } from "./english.ts";
 const short = z.string().trim().min(1).max(1000);
 export const sourceSchema = z.object({
   title: z.string().max(500),
@@ -56,13 +57,25 @@ export type Venue = z.infer<typeof venueSchema>;
 export type VenueSearch = z.infer<typeof venueSearchSchema>;
 export type SelectedVenue = z.infer<typeof selectedVenueSchema>;
 export const venueUnitLabels: Record<Venue["price"]["unit"], string> = {
-  event: "sự kiện",
-  day: "ngày",
-  half_day: "buổi",
-  hour: "giờ",
-  person: "khách",
-  package: "gói",
+  event: "event",
+  day: "day",
+  half_day: "half-day",
+  hour: "hour",
+  person: "person",
+  package: "package",
 };
+export function venueQuantityText(
+  quantity: number,
+  unit: Venue["price"]["unit"],
+) {
+  const label =
+    quantity === 1
+      ? venueUnitLabels[unit]
+      : unit === "person"
+        ? "people"
+        : venueUnitLabels[unit] + "s";
+  return quantity.toLocaleString("en-US") + " " + label;
+}
 export function venueSearchArea(value: string) {
   const area = value.trim();
   const normalized = area
@@ -81,34 +94,36 @@ export function venueSearchArea(value: string) {
 export function selectedVenueText(selected: SelectedVenue) {
   const v = selected.venue;
   return [
-    "ĐỊA ĐIỂM ĐƯỢC CHỌN",
+    "SELECTED VENUE",
     v.name,
     v.address,
-    "Khu vực: " + v.area,
-    "Sức chứa tham khảo: " + (v.capacity ?? "Cần xác nhận"),
-    "Giá: " +
+    "Area: " + v.area,
+    "Reference capacity: " + (v.capacity ?? "Confirmation required"),
+    "Price: " +
       (v.price.min === null
-        ? "Cần liên hệ báo giá"
-        : v.price.min.toLocaleString("vi-VN") +
+        ? "Quote required"
+        : v.price.min.toLocaleString("en-US") +
           "–" +
-          v.price.max!.toLocaleString("vi-VN") +
+          v.price.max!.toLocaleString("en-US") +
           " VND / " +
           venueUnitLabels[v.price.unit]),
-    "Loại giá: " +
+    "Price type: " +
       {
-        reference: "Tham khảo từ kết quả tìm kiếm",
-        estimate: "Ước tính AI, chưa có báo giá",
-        quote_required: "Cần báo giá",
+        reference: "Search reference price",
+        estimate: "AI estimate, not a supplier quote",
+        quote_required: "Quote required",
       }[v.price.kind],
-    "Số lượng thuê: " + selected.quantity + " " + venueUnitLabels[v.price.unit],
-    "Ghi chú giá: " + v.price.notes,
+    "Rental quantity: " + venueQuantityText(selected.quantity, v.price.unit),
+    "Price notes: " + englishPlanningText(v.price.notes),
     ...(v.price.evidence
-      ? ["Bằng chứng giá tham khảo: " + v.price.evidence]
+      ? ["Reference price evidence: " + v.price.evidence]
       : []),
-    "Dịch vụ bao gồm: " +
-      (v.included.length ? v.included.join("; ") : "Cần xác nhận"),
-    "Điều kiện: " + v.conditions.join("; "),
-    "Nguồn: " + v.sources.map((s) => s.url).join(", "),
-    "Chưa xác nhận tình trạng trống hoặc đặt chỗ.",
+    "Included services: " +
+      (v.included.length
+        ? v.included.map(englishPlanningText).join("; ")
+        : "Confirmation required"),
+    "Conditions: " + v.conditions.map(englishPlanningText).join("; "),
+    "Source: " + v.sources.map((s) => s.url).join(", "),
+    "Availability and booking are not confirmed.",
   ].join("\n");
 }

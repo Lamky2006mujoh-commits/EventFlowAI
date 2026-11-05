@@ -7,10 +7,12 @@ import {
   type Budget,
   type BudgetItem,
 } from "../../supabase/functions/_shared/budget";
+import { englishPlanningText } from "../../supabase/functions/_shared/english";
 const money = (n: number) =>
-  new Intl.NumberFormat("vi-VN", {
+  new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "VND",
+    currencyDisplay: "code",
     maximumFractionDigits: 0,
   }).format(n);
 export default function BudgetEditor({
@@ -29,10 +31,10 @@ export default function BudgetEditor({
   if (!budget)
     return (
       <section className="budget-editor">
-        <h3>Ngân sách dự kiến theo hạng mục</h3>
+        <h3>Itemized estimated budget</h3>
         <p>
-          Phiên bản cũ chưa có bảng chi phí. Bạn có thể khởi tạo phân bổ từ ngân
-          sách brief rồi điều chỉnh trước khi lưu.
+          This older version has no cost breakdown. Start with an allocation
+          from the brief budget, then adjust it before saving.
         </p>
         <button
           type="button"
@@ -40,7 +42,7 @@ export default function BudgetEditor({
           disabled={disabled}
           onClick={() => onChange(baselineBudget(limit, attendees))}
         >
-          Thêm bảng ngân sách dự kiến
+          Add estimated budget
         </button>
       </section>
     );
@@ -57,13 +59,13 @@ export default function BudgetEditor({
     (c) => !budget.items.some((i) => i.category === c),
   );
   return (
-    <section className="budget-editor" aria-label="Ngân sách dự kiến">
+    <section className="budget-editor" aria-label="Estimated budget">
       <div className="planning-heading">
         <div>
-          <h3>Ngân sách dự kiến theo hạng mục</h3>
+          <h3>Itemized estimated budget</h3>
           <p>
-            Ngân sách brief: <strong>{money(limit)}</strong> · VND · Mọi giá
-            chưa xác nhận đều là ước tính.
+            Brief budget: <strong>{money(limit)}</strong> · VND · All
+            unconfirmed prices are estimates.
           </p>
         </div>
         <button
@@ -77,17 +79,17 @@ export default function BudgetEditor({
                 ...budget.items,
                 {
                   category: "other",
-                  description: "Chi phí mới",
+                  description: "New cost item",
                   quantity: 1,
-                  unit: "gói",
+                  unit: "package",
                   unitCost: 0,
-                  notes: "Ước tính, cần báo giá.",
+                  notes: "Estimate; supplier quote required.",
                 },
               ],
             })
           }
         >
-          Thêm hạng mục
+          Add cost item
         </button>
       </div>
       <div className="budget-items">
@@ -95,13 +97,13 @@ export default function BudgetEditor({
           <article
             className="budget-item"
             key={index}
-            aria-label={"Hạng mục " + (index + 1)}
+            aria-label={"Cost item " + (index + 1)}
           >
             <div className="budget-item-heading">
               <label className="field">
-                <span>Nhóm chi phí</span>
+                <span>Cost category</span>
                 <select
-                  aria-label={"Nhóm chi phí " + (index + 1)}
+                  aria-label={"Cost category " + (index + 1)}
                   value={item.category}
                   disabled={disabled}
                   onChange={(e) =>
@@ -118,12 +120,12 @@ export default function BudgetEditor({
                 </select>
               </label>
               <label className="field">
-                <span>Nội dung</span>
+                <span>Description</span>
                 <input
-                  aria-label={"Nội dung chi phí " + (index + 1)}
+                  aria-label={"Cost description " + (index + 1)}
                   maxLength={300}
                   required
-                  value={item.description}
+                  value={englishPlanningText(item.description)}
                   disabled={disabled}
                   onChange={(e) =>
                     update(index, { description: e.target.value })
@@ -133,7 +135,7 @@ export default function BudgetEditor({
               <button
                 type="button"
                 className="text-button"
-                aria-label={"Xóa hạng mục " + (index + 1)}
+                aria-label={"Remove cost item " + (index + 1)}
                 disabled={disabled || budget.items.length === 1}
                 onClick={() =>
                   onChange({
@@ -147,9 +149,9 @@ export default function BudgetEditor({
             </div>
             <div className="budget-item-values">
               <label className="field">
-                <span>Số lượng</span>
+                <span>Quantity</span>
                 <input
-                  aria-label={"Số lượng chi phí " + (index + 1)}
+                  aria-label={"Cost quantity " + (index + 1)}
                   type="number"
                   min={1}
                   max={100000}
@@ -163,20 +165,20 @@ export default function BudgetEditor({
                 />
               </label>
               <label className="field">
-                <span>Đơn vị</span>
+                <span>Unit</span>
                 <input
-                  aria-label={"Đơn vị chi phí " + (index + 1)}
+                  aria-label={"Cost unit " + (index + 1)}
                   maxLength={40}
                   required
-                  value={item.unit}
+                  value={englishPlanningText(item.unit)}
                   disabled={disabled}
                   onChange={(e) => update(index, { unit: e.target.value })}
                 />
               </label>
               <label className="field">
-                <span>Đơn giá (VND)</span>
+                <span>Unit cost (VND)</span>
                 <input
-                  aria-label={"Đơn giá chi phí " + (index + 1)}
+                  aria-label={"Unit cost " + (index + 1)}
                   type="number"
                   min={0}
                   max={1e12}
@@ -190,16 +192,16 @@ export default function BudgetEditor({
                 />
               </label>
               <div className="budget-line-total">
-                <span>Thành tiền</span>
+                <span>Line total</span>
                 <strong>{money(item.quantity * item.unitCost)}</strong>
               </div>
             </div>
             <label className="field budget-note">
-              <span>Ghi chú / cơ sở ước tính</span>
+              <span>Notes / estimate basis</span>
               <input
-                aria-label={"Ghi chú chi phí " + (index + 1)}
+                aria-label={"Cost notes " + (index + 1)}
                 maxLength={1000}
-                value={item.notes}
+                value={englishPlanningText(item.notes)}
                 disabled={disabled}
                 onChange={(e) => update(index, { notes: e.target.value })}
               />
@@ -209,9 +211,9 @@ export default function BudgetEditor({
       </div>
       <div className="budget-percentages">
         <label className="field">
-          <span>Dự phòng (%)</span>
+          <span>Contingency (%)</span>
           <input
-            aria-label="Dự phòng (%)"
+            aria-label="Contingency (%)"
             type="number"
             min={0}
             max={50}
@@ -228,9 +230,9 @@ export default function BudgetEditor({
           />
         </label>
         <label className="field">
-          <span>Thuế bổ sung dự kiến (%)</span>
+          <span>Estimated additional tax (%)</span>
           <input
-            aria-label="Thuế bổ sung dự kiến (%)"
+            aria-label="Estimated additional tax (%)"
             type="number"
             min={0}
             max={100}
@@ -246,60 +248,60 @@ export default function BudgetEditor({
       </div>
       <dl className="budget-totals" aria-live="polite">
         <div>
-          <dt>Tạm tính</dt>
+          <dt>Subtotal</dt>
           <dd>{money(totals.subtotal)}</dd>
         </div>
         <div>
-          <dt>Dự phòng</dt>
+          <dt>Contingency</dt>
           <dd>{money(totals.contingency)}</dd>
         </div>
         <div>
-          <dt>Thuế dự kiến</dt>
+          <dt>Estimated tax</dt>
           <dd>{money(totals.tax)}</dd>
         </div>
         <div className="budget-grand-total">
-          <dt>Tổng dự kiến</dt>
+          <dt>Estimated total</dt>
           <dd>{money(totals.total)}</dd>
         </div>
         <div className={totals.overBudget ? "budget-over" : "budget-under"}>
-          <dt>
-            {totals.overBudget ? "Vượt ngân sách" : "Còn lại trong ngân sách"}
-          </dt>
+          <dt>{totals.overBudget ? "Over budget" : "Remaining budget"}</dt>
           <dd>{money(Math.abs(totals.remaining))}</dd>
         </div>
       </dl>
       {totals.overBudget && (
         <p className="error" role="status">
-          Tổng dự kiến vượt ngân sách brief. Điều chỉnh chi phí hoặc cập nhật
-          brief trước khi chốt.
+          The estimated total exceeds the brief budget. Adjust costs or update
+          the brief before finalizing.
         </p>
       )}
       {!valid && (
         <p className="error" role="alert">
-          Kiểm tra số lượng, đơn giá, tỷ lệ và giới hạn ngân sách trước khi lưu.
+          Check quantities, unit costs, percentages and budget limits before
+          saving.
         </p>
       )}
       {!!missing.length && (
         <p className="muted">
-          Chưa phân bổ: {missing.map((c) => budgetCategoryLabels[c]).join(", ")}
-          . Bổ sung nếu thuộc phạm vi sự kiện.
+          Not allocated:{" "}
+          {missing.map((c) => budgetCategoryLabels[c]).join(", ")}. Add these if
+          they are in scope for the event.
         </p>
       )}
       <label className="field">
-        <span>Giả định ngân sách</span>
+        <span>Budget assumptions</span>
         <textarea
-          aria-label="Giả định ngân sách"
+          aria-label="Budget assumptions"
           rows={3}
           maxLength={2000}
-          value={budget.assumptions}
+          value={englishPlanningText(budget.assumptions)}
           disabled={disabled}
           onChange={(e) => onChange({ ...budget, assumptions: e.target.value })}
         />
       </label>
       <p className="muted">
-        Thuế tính trên tạm tính cộng dự phòng. Tỷ lệ 0% có thể là chưa xác nhận
-        hoặc giá đã bao gồm thuế; ghi rõ cơ sở. Kiểm tra tránh tính trùng dịch
-        vụ trong gói địa điểm.
+        Tax is calculated on the subtotal plus contingency. A 0% rate may mean
+        tax is unconfirmed or included; explain the basis. Avoid counting
+        services already included in a venue package twice.
       </p>
     </section>
   );

@@ -30,7 +30,7 @@ test("live Supabase login, saved AI proposal, manual version, export, reload and
   );
   const nextVersion = currentVersion + 1;
   const addBudget = page.getByRole("button", {
-    name: "Thêm bảng ngân sách dự kiến",
+    name: "Add estimated budget",
     exact: true,
   });
   if (await addBudget.isVisible()) await addBudget.click();

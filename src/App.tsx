@@ -249,7 +249,7 @@ function BriefForm({
               disabled={busy}
               value={data.venue}
               maxLength={300}
-              placeholder="City, region or country — e.g. TP.HCM or Việt Nam"
+              placeholder="City, region or country — e.g. Ho Chi Minh City or Vietnam"
               onChange={(e) => update("venue", e.target.value)}
             />
           </Field>

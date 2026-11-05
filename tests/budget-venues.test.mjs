@@ -164,8 +164,8 @@ test("venue selection updates rent and appends a proposal version without losing
     food,
   );
   assert.equal(s.history[1].data.venue.venue.id, saved.venue.venue.id);
-  assert.match(proposalText(s.proposal), /NGÂN SÁCH DỰ KIẾN/);
-  assert.match(proposalText(s.proposal), /ĐỊA ĐIỂM ĐƯỢC CHỌN/);
+  assert.match(proposalText(s.proposal), /ESTIMATED BUDGET/);
+  assert.match(proposalText(s.proposal), /SELECTED VENUE/);
   assert.ok(!proposalText(s.proposal).includes("[object Object]"));
 });
 test("venue writes reject foreign IDs, stale source brief and cross-agency access", async () => {
@@ -234,6 +234,7 @@ function provider(value = extracted) {
       calls++;
       const input = JSON.parse(init.body);
       if (calls === 1) {
+        assert.match(input.systemInstruction.parts[0].text, /English/);
         assert.deepEqual(input.tools, [{ google_search: {} }]);
         return new Response(
           JSON.stringify({
@@ -419,7 +420,7 @@ test("venue export retains price caveats, evidence and included services", async
   assert.match(exported, /VAT not confirmed; deposit excluded/);
   assert.match(exported, /Public rate: 12.000.000 VND/);
   assert.match(exported, /Stage; Chairs/);
-  assert.match(exported, /2 ngày/);
+  assert.match(exported, /2 days/);
   assert.ok(!exported.includes("[object Object]"));
 });
 

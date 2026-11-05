@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { englishPlanningText } from "./english.ts";
 export const budgetCategories = [
   "venue",
   "catering",
@@ -14,15 +15,15 @@ export const budgetCategoryLabels: Record<
   (typeof budgetCategories)[number],
   string
 > = {
-  venue: "Địa điểm",
-  catering: "Ăn uống",
-  production: "Sân khấu, âm thanh & ánh sáng",
-  decoration: "Trang trí",
-  staffing: "Nhân sự",
-  marketing: "Truyền thông",
-  transport: "Vận chuyển",
-  permits: "An toàn, giấy phép & bảo hiểm",
-  other: "Chi phí khác",
+  venue: "Venue",
+  catering: "Catering",
+  production: "Stage, sound & lighting",
+  decoration: "Decoration",
+  staffing: "Staffing",
+  marketing: "Marketing",
+  transport: "Transport",
+  permits: "Safety, permits & insurance",
+  other: "Other costs",
 };
 export const budgetItemSchema = z.object({
   category: z.enum(budgetCategories),
@@ -72,49 +73,50 @@ export function baselineBudget(limit: number, attendees: number): Budget {
         category,
         description: budgetCategoryLabels[category],
         quantity,
-        unit: category === "catering" ? "khách" : "gói",
+        unit: category === "catering" ? "person" : "package",
         unitCost: Math.floor((base * weights[i]) / weight / quantity),
-        notes: "Phân bổ dự kiến; cần xác nhận báo giá và phạm vi dịch vụ.",
+        notes:
+          "Estimated allocation; confirm supplier quotes and service scope.",
       };
     }),
     contingencyPercent: 10,
     taxPercent: 0,
     assumptions:
-      "Đây là phân bổ ước tính theo brief, chưa phải báo giá. Thuế/VAT chưa xác nhận; nhập tỷ lệ sau khi nhận báo giá. Chi phí dự phòng tính trên tạm tính; thuế tính trên tạm tính cộng dự phòng.",
+      "This is an estimated allocation based on the brief, not a supplier quote. Tax/VAT is unconfirmed; enter the rate after receiving quotes. Contingency applies to the subtotal; tax applies to subtotal plus contingency.",
   };
 }
 export function budgetText(b: Budget) {
   const t = budgetTotals(b, 0);
   return [
-    "NGÂN SÁCH DỰ KIẾN (VND)",
+    "ESTIMATED BUDGET (VND)",
     ...b.items.map(
       (i) =>
         budgetCategoryLabels[i.category] +
         " — " +
-        i.description +
+        englishPlanningText(i.description) +
         ": " +
         i.quantity +
         " " +
-        i.unit +
+        englishPlanningText(i.unit) +
         " × " +
-        i.unitCost.toLocaleString("vi-VN") +
+        i.unitCost.toLocaleString("en-US") +
         " = " +
-        (i.quantity * i.unitCost).toLocaleString("vi-VN") +
+        (i.quantity * i.unitCost).toLocaleString("en-US") +
         " VND" +
-        (i.notes ? " (" + i.notes + ")" : ""),
+        (i.notes ? " (" + englishPlanningText(i.notes) + ")" : ""),
     ),
-    "Tạm tính: " + t.subtotal.toLocaleString("vi-VN") + " VND",
-    "Dự phòng (" +
+    "Subtotal: " + t.subtotal.toLocaleString("en-US") + " VND",
+    "Contingency (" +
       b.contingencyPercent +
       "%): " +
-      t.contingency.toLocaleString("vi-VN") +
+      t.contingency.toLocaleString("en-US") +
       " VND",
-    "Thuế dự kiến (" +
+    "Estimated tax (" +
       b.taxPercent +
       "%): " +
-      t.tax.toLocaleString("vi-VN") +
+      t.tax.toLocaleString("en-US") +
       " VND",
-    "Tổng dự kiến: " + t.total.toLocaleString("vi-VN") + " VND",
-    "Giả định: " + b.assumptions,
+    "Estimated total: " + t.total.toLocaleString("en-US") + " VND",
+    "Assumptions: " + englishPlanningText(b.assumptions),
   ].join("\n");
 }

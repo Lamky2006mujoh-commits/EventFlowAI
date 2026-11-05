@@ -119,7 +119,7 @@ test("fresh clone routes login, concept generation and venue search to the share
     .click();
   await expect(page.locator(".concept-card")).toHaveCount(2);
   await page
-    .getByRole("button", { name: "Tìm địa điểm trên web", exact: true })
+    .getByRole("button", { name: "Find venues on the web", exact: true })
     .click();
   await expect(page.locator(".venue-card")).toHaveCount(3);
   // React development StrictMode may repeat the initial planning read.

@@ -61,6 +61,13 @@ Sprint 3 planning and carried-over work: [read the backlog](docs/SPRINT3_BACKLOG
 
 ## Sprint 3 features
 
+Planning screens, exports and application-generated budget notes use English.
+New concept, proposal and venue-summary requests instruct the model to write in
+English even when the brief or source material uses another language. Proper
+names and original source quotations retain their spelling. Known older system
+notes display in English; regenerate older narrative content to obtain an English
+version without rewriting saved history.
+
 - **US-04:** Gemini concepts through an authenticated Edge Function; 2–3 structured concepts, Zod validation, bounded retries and controlled errors.
 - **US-05:** Compare themes, activities and assumptions; persist the selected concept.
 - **US-06:** Generate and edit proposal sections, append author/timestamp versions, explicitly confirm regeneration and retain manual edits in history.

@@ -140,6 +140,6 @@ export function proposalText(proposal: z.infer<typeof proposalSchema>) {
       : []),
     ...(proposal.data.budget
       ? ["\n" + budgetText(proposal.data.budget)]
-      : ["\nNgân sách chi tiết chưa có trong phiên bản cũ này."]),
+      : ["\nThis older version has no itemized budget."]),
   ].join("\n");
 }
