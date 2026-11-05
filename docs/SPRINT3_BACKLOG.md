@@ -10,21 +10,31 @@ This plan includes work already implemented and the remaining validation and acc
 
 **Scenario assumption requested for this plan:** S3-BUG-01 is shown as **Done (assumed)** for a simulated sprint walkthrough. This does not record an actual email-delivery fix or a successful live email test. The factual verification status is retained in the carry-over section.
 
+## Current execution evidence — 5 November 2026
+
+The current implementation and delivery findings are recorded in
+[SPRINT3_EXECUTION_REPORT.md](SPRINT3_EXECUTION_REPORT.md). All local story flows
+are implemented and regression-tested. Fresh live Gemini/budget/search evidence,
+deployment of the local increment and Product Owner acceptance remain separate
+gates. The user explicitly deferred the fresh email-delivery test; no email was
+sent and its actual acceptance is not marked Done. Upstream backlog commit
+`38b077b` has green CI; that run does not verify the uncommitted local increment.
+
 ## Sprint Backlog
 
-| ID        | Type                 | Priority | Backlog Item                                                               | Planning Status                                                           |
-| --------- | -------------------- | -------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| S3-BUG-01 | Bug / carry-over     | P0       | Resolve confirmation-email delivery and rate-limit incident from S2-BUG-01 | Done (assumed for the planning scenario); real verification pending       |
-| US-04     | Story                | P0       | Generate structured event concepts from a saved brief                      | Implemented; include in final regression                                  |
-| US-05     | Story                | P0       | Compare concepts and persist the selected option                           | Implemented; include in final regression                                  |
-| US-06     | Story                | P0       | Generate, edit, and version proposals                                      | Implemented; final acceptance pending                                     |
-| S3-US-01  | Story / extension    | P0       | Build an editable itemized proposal budget                                 | Implemented; fresh AI budget generation needs live verification           |
-| S3-US-02  | Story / extension    | P1       | Search, compare, and select event venues with prices and conditions        | Implemented; live grounded search validation pending                      |
-| US-07     | Story                | P1       | Export the latest saved proposal as UTF-8 text                             | Implemented; include in final regression                                  |
-| S3-T01    | Technical / QA       | P0       | Run Sprint 2 and Sprint 3 regression, security, and CI checks              | Local evidence available; final commit and remote CI verification pending |
-| S3-T02    | Technical / QA       | P0       | Validate Gemini availability, quota handling, and real search results      | Pending provider quota recovery and live retest                           |
-| S3-T03    | Technical / delivery | P0       | Verify deployment, migrations, configuration, and handover documentation   | Backend deployed; final delivery checks pending                           |
-| S3-T04    | Acceptance           | P1       | Conduct the sprint review and record acceptance or remaining defects       | Pending Product Owner review                                              |
+| ID        | Type                 | Priority | Backlog Item                                                               | Planning Status                                                                       |
+| --------- | -------------------- | -------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| S3-BUG-01 | Bug / carry-over     | P0       | Resolve confirmation-email delivery and rate-limit incident from S2-BUG-01 | Done only in scenario; actual email test deferred by user                             |
+| US-04     | Story                | P0       | Generate structured event concepts from a saved brief                      | Implemented; current local regression passed                                          |
+| US-05     | Story                | P0       | Compare concepts and persist the selected option                           | Implemented; current local regression passed                                          |
+| US-06     | Story                | P0       | Generate, edit, and version proposals                                      | Implemented; local regression passed; PO acceptance pending                           |
+| S3-US-01  | Story / extension    | P0       | Build an editable itemized proposal budget                                 | Implemented and locally verified; fresh AI budget acceptance pending                  |
+| S3-US-02  | Story / extension    | P1       | Search, compare, and select event venues with prices and conditions        | Implemented; local regression passed; real city/nationwide search pending             |
+| US-07     | Story                | P1       | Export the latest saved proposal as UTF-8 text                             | Implemented; current local regression passed                                          |
+| S3-T01    | Technical / QA       | P0       | Run Sprint 2 and Sprint 3 regression, security, and CI checks              | Local acceptance passed; CI runner unified; delivery CI pending                       |
+| S3-T02    | Technical / QA       | P0       | Validate Gemini availability, quota handling, and real search results      | Failure contracts verified; fresh authenticated provider retest pending               |
+| S3-T03    | Technical / delivery | P0       | Verify deployment, migrations, configuration, and handover documentation   | Existing functions/7 migrations inspected; local package verified; deployment pending |
+| S3-T04    | Acceptance           | P1       | Conduct the sprint review and record acceptance or remaining defects       | Review scenarios prepared; Product Owner decision pending                             |
 
 US-04, US-05, US-06, US-07, and S3-T01 retain the existing Sprint 3 identifiers. S3-US-01, S3-US-02, and S3-T02–S3-T04 are supplemental planning identifiers. S3-BUG-01 continues the existing S2-BUG-01 issue rather than introducing a second independent incident.
 

@@ -21,6 +21,7 @@ import {
   MapPin,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   ShieldCheck,
   Sparkles,
@@ -148,14 +149,29 @@ function BriefForm({
   onSave,
   onCancel,
   busy,
+  onDirtyChange,
 }: {
   brief?: Brief;
   onSave: (data: BriefData) => void;
   onCancel: () => void;
   busy: boolean;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const [data, setData] = useState<BriefData>(brief?.data ?? blank);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const dirty = JSON.stringify(data) !== JSON.stringify(brief?.data ?? blank);
+  useEffect(() => {
+    onDirtyChange(dirty);
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    if (dirty) window.addEventListener("beforeunload", warn);
+    return () => {
+      onDirtyChange(false);
+      window.removeEventListener("beforeunload", warn);
+    };
+  }, [dirty, onDirtyChange]);
   function update<K extends keyof BriefData>(key: K, value: BriefData[K]) {
     setData((d) => ({ ...d, [key]: value }));
   }
@@ -189,6 +205,7 @@ function BriefForm({
         <div className="form-grid">
           <Field label="Event name" error={errors.title}>
             <input
+              disabled={busy}
               value={data.title}
               maxLength={160}
               placeholder="e.g. Nova product launch 2026"
@@ -198,6 +215,7 @@ function BriefForm({
           </Field>
           <Field label="Client / organization" error={errors.client}>
             <input
+              disabled={busy}
               value={data.client}
               maxLength={160}
               placeholder="Who are we creating this for?"
@@ -206,6 +224,7 @@ function BriefForm({
           </Field>
           <Field label="Event type" error={errors.eventType}>
             <select
+              disabled={busy}
               value={data.eventType}
               onChange={(e) =>
                 update("eventType", e.target.value as BriefData["eventType"])
@@ -218,6 +237,7 @@ function BriefForm({
           </Field>
           <Field label="Event date" error={errors.date}>
             <input
+              disabled={busy}
               type="date"
               value={data.date}
               onInput={(e) => update("date", e.currentTarget.value)}
@@ -226,6 +246,7 @@ function BriefForm({
           </Field>
           <Field label="Venue / proposed location" error={errors.venue}>
             <input
+              disabled={busy}
               value={data.venue}
               maxLength={300}
               placeholder="City, region or country — e.g. TP.HCM or Việt Nam"
@@ -234,6 +255,7 @@ function BriefForm({
           </Field>
           <Field label="Expected attendees" error={errors.attendees}>
             <input
+              disabled={busy}
               type="number"
               min="1"
               max="100000"
@@ -244,6 +266,7 @@ function BriefForm({
           </Field>
           <Field label="Client budget (VND)" error={errors.budget}>
             <input
+              disabled={busy}
               type="number"
               min="1"
               max="1000000000000"
@@ -261,6 +284,7 @@ function BriefForm({
         </div>
         <Field label="Event objectives" error={errors.objectives}>
           <textarea
+            disabled={busy}
             rows={4}
             value={data.objectives}
             maxLength={5000}
@@ -270,6 +294,7 @@ function BriefForm({
         </Field>
         <Field label="Audience profile" optional error={errors.audience}>
           <textarea
+            disabled={busy}
             rows={3}
             value={data.audience}
             maxLength={2000}
@@ -279,6 +304,7 @@ function BriefForm({
         </Field>
         <Field label="Planning constraints" optional error={errors.constraints}>
           <textarea
+            disabled={busy}
             rows={3}
             value={data.constraints}
             maxLength={5000}
@@ -409,6 +435,7 @@ export default function App() {
   const [version, setVersion] = useState<number | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const [planningDirty, setPlanningDirty] = useState(false);
+  const [briefDirty, setBriefDirty] = useState(false);
   const [deleteText, setDeleteText] = useState("");
   const [removeMemberId, setRemoveMemberId] = useState<string | null>(null);
   useEffect(() => {
@@ -469,15 +496,16 @@ export default function App() {
       setBusy(false);
     }
   }
-  function navigate(next: Page, id: string | null = null) {
-    if (busy) return;
-    if (
-      planningDirty &&
-      !window.confirm(
-        "Leave this page and discard unsaved proposal edits? Saved versions will remain available.",
+  function confirmDiscard() {
+    return (
+      !(planningDirty || briefDirty) ||
+      window.confirm(
+        `Discard unsaved ${briefDirty ? "brief" : "proposal"} edits? Saved versions will remain available.`,
       )
-    )
-      return;
+    );
+  }
+  function navigate(next: Page, id: string | null = null) {
+    if (busy || !confirmDiscard()) return;
     setPage(next);
     setSelectedId(id);
     setVersion(null);
@@ -639,6 +667,7 @@ export default function App() {
               title="Sign out"
               disabled={busy}
               onClick={() => {
+                if (!confirmDiscard()) return;
                 void run(async () => {
                   await api.logout();
                   setWorkspace(null);
@@ -660,6 +689,17 @@ export default function App() {
             <ChevronRight size={14} />
             <span>{titles[page]}</span>
           </div>
+          <button
+            className="icon-button"
+            aria-label="Refresh workspace"
+            title="Refresh workspace"
+            disabled={busy || briefDirty || planningDirty}
+            onClick={() => {
+              void run(refresh);
+            }}
+          >
+            <RefreshCw size={17} />
+          </button>
           <span className={`mode-label ${liveMode ? "live" : ""}`}>
             <span />
             {liveMode ? "Supabase configured" : "Local demo"}
@@ -759,13 +799,94 @@ export default function App() {
           {liveMode &&
             session.role === "admin" &&
             signupError &&
-            page !== "members" && (
+            page !== "members" &&
+            page !== "overview" && (
               <p className="error" role="alert">
                 Signup notifications unavailable: {signupError}
               </p>
             )}
           {page === "overview" && (
             <>
+              {liveMode && session.role === "admin" && (
+                <section
+                  className="panel signup-review"
+                  aria-label="Pending signup applicants"
+                >
+                  <div className="planning-heading">
+                    <div>
+                      <h3>Pending signup applicants</h3>
+                      <p>
+                        People requesting to join your agency. No email search
+                        required.
+                      </p>
+                    </div>
+                    <button
+                      className="button secondary"
+                      disabled={busy}
+                      onClick={() => navigate("members")}
+                    >
+                      Review all signup requests
+                    </button>
+                  </div>
+                  {signupError ? (
+                    <p className="error" role="alert">
+                      Could not load applicants: {signupError}
+                    </p>
+                  ) : !signupQueue ? (
+                    <p role="status">Loading applicants…</p>
+                  ) : (
+                    <>
+                      <p>
+                        {signupQueue.pendingCount} pending signup request
+                        {signupQueue.pendingCount === 1 ? "" : "s"}
+                      </p>
+                      {!signupQueue.pendingCount && (
+                        <p className="muted">
+                          No one is waiting to join this agency. Share your
+                          agency registration code from Members &amp; roles with
+                          new applicants.
+                        </p>
+                      )}
+                      <ul
+                        className="signup-pending-list"
+                        aria-label="Pending applicants"
+                      >
+                        {signupQueue.requests
+                          .filter((request) => request.status === "pending")
+                          .slice(0, 5)
+                          .map((request) => (
+                            <li className="signup-request" key={request.id}>
+                              <div>
+                                <strong>{request.name}</strong>
+                                <p>{request.email}</p>
+                                <p className="muted">
+                                  Requested{" "}
+                                  {new Date(request.createdAt).toLocaleString()}
+                                </p>
+                              </div>
+                              <span
+                                className={
+                                  "badge " +
+                                  (request.emailConfirmed ? "green" : "amber")
+                                }
+                              >
+                                {request.emailConfirmed
+                                  ? "Ready for review"
+                                  : "Waiting for email confirmation"}
+                              </span>
+                            </li>
+                          ))}
+                      </ul>
+                      {signupQueue.pendingCount > 5 && (
+                        <p className="muted">
+                          Showing the latest 5 applicants. Open review to see
+                          more requests.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </section>
+              )}
               <div className="overview-grid">
                 <section className="welcome-card">
                   <div>
@@ -1001,6 +1122,7 @@ export default function App() {
               key={selected?.id ?? "new"}
               brief={selected}
               busy={busy}
+              onDirtyChange={setBriefDirty}
               onCancel={() =>
                 navigate(selected ? "detail" : "briefs", selected?.id)
               }
@@ -1011,15 +1133,19 @@ export default function App() {
                     selected?.id,
                     selected?.version,
                   );
-                  await refresh();
-                  setSelectedId(id);
-                  setPage("detail");
+                  // The write has committed. Leave the form even if the read
+                  // below fails, so retrying cannot create a duplicate brief.
+                  setSelectedId(null);
+                  setPage("briefs");
                   setVersion(null);
                   setNotice(
                     selected
                       ? `Version ${selected.version + 1} saved. Previous versions are preserved.`
                       : `Brief created successfully. ID: ${id}`,
                   );
+                  await refresh();
+                  setSelectedId(id);
+                  setPage("detail");
                 });
               }}
             />
@@ -1228,7 +1354,13 @@ export default function App() {
                     <button
                       key={v.version}
                       className={`history-row ${(version ?? selected.version) === v.version ? "selected" : ""}`}
-                      onClick={() => setVersion(v.version)}
+                      disabled={busy}
+                      onClick={() => {
+                        if (confirmDiscard())
+                          setVersion(
+                            v.version === selected.version ? null : v.version,
+                          );
+                      }}
                     >
                       <span className="history-dot" />
                       <span>
@@ -1271,14 +1403,14 @@ export default function App() {
                     let saved = false;
                     await run(async () => {
                       await api.reviewSignup(id, decision);
+                      saved = true;
                       setSignupRevision((v) => v + 1);
-                      await refresh();
                       setNotice(
                         decision === "approve"
                           ? "Signup approved. Member access saved."
                           : "Signup rejected. Decision saved.",
                       );
-                      saved = true;
+                      await refresh();
                     });
                     return saved;
                   }}
@@ -1291,11 +1423,11 @@ export default function App() {
                     let saved = false;
                     await run(async () => {
                       await api.addMember(email, name, "member");
-                      await refresh();
+                      saved = true;
                       setNotice(
                         `${name} was added to your agency as a member.`,
                       );
-                      saved = true;
+                      await refresh();
                     });
                     return saved;
                   }}

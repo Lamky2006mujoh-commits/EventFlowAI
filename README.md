@@ -11,7 +11,7 @@ npm install
 npm run dev -- --host 127.0.0.1
 ```
 
-Open the URL printed by Vite. The current workspace runs at http://localhost:5173/ and uses the newly deployed Supabase project `epmgcyiuloxtblzdrwsw`. Review account credentials are stored locally in the ignored `.env.acceptance.local` file. Both administrators and members sign in with email/password. Their role comes from server-side agency membership, never a role selected on the login form.
+Open the URL printed by Vite (normally http://localhost:5173/). The current checkout's public configuration points to Supabase project `qazukdulzixiudzyrhdn`, verified on 5 November 2026. Sign in with your own confirmed agency account. Optional live-test credential files are ignored and are not distributed with the repository. Both administrators and members sign in with email/password. Their role comes from server-side agency membership, never a role selected on the login form.
 
 Configure `.env.local` with the project public values:
 
@@ -69,6 +69,29 @@ Configure the new migration, `planning` Edge Function and server-only Gemini sec
 Browser-only sample mode is available explicitly with `VITE_APP_MODE=demo`; it uses labeled sample templates instead of AI and must not be used for confidential data. Logistics, feasibility and execution remain outside this increment.
 
 ## Verification
+
+Proposal generation follows the selected concept and one explicit location.
+Without a venue search it uses the location entered in the saved brief exactly.
+After a successful venue search, choose a result before generating the proposal;
+that choice takes precedence over the brief's original search area. Changing the
+venue later preserves saved text/history and updates rental costs, then requires
+proposal regeneration so the narrative can be adapted to the new venue.
+
+Run `npm run verify:sprint3` for all local checks, or
+`npm run verify:sprint3 -- --live-readonly` to also verify Auth settings and
+anonymous access denial against `.env.local`. Results, timings and a source
+fingerprint are written to `test-results/sprint3-verification.json`.
+See [current Sprint 3 execution evidence](docs/SPRINT3_EXECUTION_REPORT.md)
+for completed work and the remaining live-provider/email acceptance gates.
+
+The signup review panel supports name/email search and filters for confirmed or
+unconfirmed pending accounts. Search covers the latest 100 loaded requests; the
+pending badge counts every pending request. Approval still requires email
+confirmation and always grants Member access.
+
+Unsaved brief and proposal edits require confirmation before leaving the editor
+or signing out. Opening brief history also checks unsaved proposal edits. Closing
+or reloading a dirty editor requests the browser's unsaved-changes warning.
 
 ```powershell
 npm test

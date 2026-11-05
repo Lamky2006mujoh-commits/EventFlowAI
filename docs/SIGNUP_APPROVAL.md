@@ -16,7 +16,12 @@ An agency code only routes requests; it does not grant access. Existing accounts
 
 ## Existing Project Rollout
 
-**Status: code and local verification completed; this revision has not been deployed to live Supabase.** No Supabase CLI installation or authenticated deployment connection is available in this execution environment.
+**Status update, 5 November 2026:** read-only inspection of the connected project
+`qazukdulzixiudzyrhdn` confirmed all seven repository migrations, including
+`signup_approval`, are recorded in its migration history. This establishes the
+database migration state only; the running Edge Function revision and live
+email/approval workflow still require end-to-end validation. The rollout steps
+below remain applicable to other existing projects.
 
 Deploy in this order before releasing the updated registration interface:
 
@@ -60,4 +65,24 @@ Only active administrators can load the code/review queue and decide requests in
 
 Approval locks the agency, rechecks administrator membership, locks the request and Auth account, verifies email confirmation, and inserts fixed-role membership together with the review decision. A second or competing review is rejected. Removing membership later does not reopen an approved request or allow a repeated approval to regrant access.
 
-The queue displays at most 100 requests, with pending requests first; the pending counter covers all pending requests. It is an in-app review notification, not an outbound email notification.
+The admin overview lists the latest five pending applicants by name and email, with email-confirmation status and a link to review all loaded requests. The review page shows pending applicants automatically; search and filters are optional controls in an expandable section. The queue displays at most 100 requests, with pending requests first; the pending counter covers all pending requests. It is an in-app review notification, not an outbound email notification. Accounts created before the signup-request workflow do not appear automatically and must not be assigned to an agency by guesswork.
+
+Name/email search applies to the loaded requests, including history. Confirmation
+filters apply to pending requests only, and never change the full pending count.
+If a review succeeds but the following workspace refresh fails, the decision is
+still acknowledged and its confirmation closes; retrying the decision is unnecessary.
+
+## Remaining review findings
+
+- Removed accounts with a previously approved request cannot currently be
+  reinstated through the app: manual addition rejects every account that has a
+  signup request, while review rejects already-reviewed requests. Add a dedicated,
+  audited reinstatement operation restricted to an active administrator of the
+  original agency. Keep pending/rejected and foreign-agency requests ineligible.
+- The 100-request limit needs server-side pagination before larger agencies can
+  browse all pending requests and review history.
+- Read-only live advisors reported disabled leaked-password protection and a
+  missing index on `agency_signup_requests.reviewed_by`. Review the Auth setting
+  and add the index through a separately verified migration. Do not add permissive
+  RLS policies merely to clear the no-policy notices: raw signup-table access is
+  intentionally revoked, with access through checked RPCs.

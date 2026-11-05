@@ -1,5 +1,8 @@
 # Báo cáo hoàn thiện và kiểm thử Sprint 3
 
+> Historical report from 4 November. For the current checkout, project and
+> acceptance boundaries, see [5 November execution evidence](SPRINT3_EXECUTION_REPORT.md).
+
 Ngày kiểm tra: **04/11/2026**. Dự án: EventFlow AI.
 
 ## Kết quả triển khai

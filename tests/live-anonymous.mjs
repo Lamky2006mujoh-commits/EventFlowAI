@@ -14,7 +14,11 @@ const { error: loginError } = await client.auth.signInWithPassword({
   email: "not-a-course-account@example.invalid",
   password: "intentionally-invalid-password",
 });
-assert.ok(loginError, "Invalid credentials must be rejected");
+assert.equal(
+  loginError?.code,
+  "invalid_credentials",
+  "Auth must reject credentials explicitly, not merely fail to connect",
+);
 console.log("PASS: invalid email/password rejected by Supabase Auth");
 for (const table of [
   "briefs",
@@ -22,13 +26,37 @@ for (const table of [
   "brief_planning",
   "agency_members",
   "agencies",
+  "agency_signup_settings",
+  "agency_signup_requests",
 ]) {
   const { data, error } = await client.from(table).select("*").limit(1);
-  assert.ok(
-    error || data.length === 0,
-    `${table} must not expose rows anonymously`,
-  );
+  if (error)
+    assert.equal(
+      error.code,
+      "42501",
+      `${table}: expected permission denial; network/setup errors are not security evidence`,
+    );
+  else assert.deepEqual(data, [], `${table} must not expose rows anonymously`);
   console.log(`PASS: anonymous ${table} read denied`);
+}
+for (const [name, params] of [
+  ["signup_review_queue", {}],
+  ["my_signup_status", {}],
+  [
+    "review_signup_request",
+    {
+      p_request_id: "10000000-0000-4000-8000-000000000001",
+      p_decision: "approve",
+    },
+  ],
+]) {
+  const { error } = await client.rpc(name, params);
+  assert.equal(
+    error?.code,
+    "42501",
+    `${name} must explicitly deny anonymous execution`,
+  );
+  console.log(`PASS: anonymous ${name} execution denied`);
 }
 for (const endpoint of ["workspace", "planning"]) {
   for (const authorization of [null, "Bearer invalid-token"]) {

@@ -2448,6 +2448,18 @@ td {
 .signup-history {
   margin-top: 24px;
 }
+.signup-pending-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.signup-filters {
+  margin: 16px 0;
+}
+.signup-filters summary {
+  cursor: pointer;
+  margin-bottom: 12px;
+}
 .signup-history summary {
   cursor: pointer;
   font-weight: 600;

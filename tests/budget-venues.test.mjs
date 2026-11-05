@@ -309,6 +309,64 @@ test("unsubstantiated published prices are downgraded; out-of-range citations ca
   });
   assert.equal(result.options.length, 0);
 });
+test("venue grounding quota is not retried or passed to extraction", async () => {
+  let calls = 0;
+  await assert.rejects(
+    () =>
+      searchVenues({ version: 1, data: brief().data }, "", {
+        apiKey: "private-fixture",
+        model: "test",
+        fetcher: async () => {
+          calls++;
+          return new Response("private-provider-body", { status: 429 });
+        },
+        sleep: async () => {
+          throw new Error("No retry after quota denial");
+        },
+      }),
+    (error) => {
+      assert.match(error.message, /grounding allowance is 0/);
+      assert.match(error.message, /GEMINI_VENUE_MODEL/);
+      assert.ok(!error.message.includes("private"));
+      return true;
+    },
+  );
+  assert.equal(calls, 1);
+});
+
+test("unavailable legacy grounding model returns actionable guidance without retries", async () => {
+  let calls = 0;
+  await assert.rejects(
+    () =>
+      searchVenues({ version: 1, data: brief().data }, "", {
+        apiKey: "fixture",
+        model: "gemini-2.5-flash-lite",
+        fetcher: async () => {
+          calls++;
+          return new Response("private-provider-details", { status: 404 });
+        },
+      }),
+    /Google limits Gemini 2.5 access to existing users/,
+  );
+  assert.equal(calls, 1);
+});
+
+test("grounding and structured extraction route to their configured models", async () => {
+  const p = provider();
+  const urls = [];
+  await searchVenues({ version: 1, data: brief().data }, "", {
+    apiKey: "fixture",
+    model: "search-model",
+    extractionModel: "text-model",
+    fetcher: async (url, init) => {
+      urls.push(String(url));
+      return p.fetcher(url, init);
+    },
+  });
+  assert.match(urls[0], /models\/search-model:generateContent$/);
+  assert.match(urls[1], /models\/text-model:generateContent$/);
+});
+
 test("search refuses unsourced output and redacts permanent provider errors", async () => {
   const b = brief();
   await assert.rejects(
@@ -339,4 +397,63 @@ test("search refuses unsourced output and redacts permanent provider errors", as
       }),
     (e) => !e.message.includes("secret-fixture"),
   );
+});
+
+test("venue export retains price caveats, evidence and included services", async () => {
+  const b = brief();
+  let s = await demo.planning({ action: "load", briefId: b.id });
+  s = await demo.planning(cmd(b, s, "searchVenues"));
+  s = await demo.planning(
+    cmd(b, s, "selectVenue", {
+      venueId: s.venueSearch.options[0].id,
+      quantity: 2,
+    }),
+  );
+  const { selectedVenueText } =
+    await import("../supabase/functions/_shared/venues.ts");
+  const selected = structuredClone(s.selectedVenue);
+  selected.venue.price.notes = "VAT not confirmed; deposit excluded.";
+  selected.venue.price.evidence = "Public rate: 12.000.000 VND / day";
+  selected.venue.included = ["Stage", "Chairs"];
+  const exported = selectedVenueText(selected);
+  assert.match(exported, /VAT not confirmed; deposit excluded/);
+  assert.match(exported, /Public rate: 12.000.000 VND/);
+  assert.match(exported, /Stage; Chairs/);
+  assert.match(exported, /2 ngày/);
+  assert.ok(!exported.includes("[object Object]"));
+});
+
+test("venue search handles malformed provider payloads as controlled failures without extraction", async () => {
+  const b = brief();
+  const { GenerationError } =
+    await import("../supabase/functions/_shared/gemini.ts");
+  for (const payload of [
+    "private-invalid-json",
+    "null",
+    JSON.stringify({
+      candidates: [
+        { finishReason: "STOP", content: { parts: "private-invalid-parts" } },
+      ],
+    }),
+  ]) {
+    let calls = 0;
+    await assert.rejects(
+      () =>
+        searchVenues({ version: 1, data: b.data }, "", {
+          apiKey: "fixture-secret",
+          model: "test",
+          fetcher: async () => {
+            calls++;
+            return new Response(payload);
+          },
+        }),
+      (error) => {
+        assert.ok(error instanceof GenerationError);
+        assert.match(error.message, /invalid.*response/i);
+        assert.ok(!error.message.includes("private"));
+        return true;
+      },
+    );
+    assert.equal(calls, 1);
+  }
 });

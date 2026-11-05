@@ -19,8 +19,20 @@ export default function SignupRequests({
     name: string;
     action: "approve" | "reject";
   } | null>(null);
-  const pending = queue?.requests.filter((r) => r.status === "pending") ?? [],
-    history = queue?.requests.filter((r) => r.status !== "pending") ?? [];
+  const [query, setQuery] = useState("");
+  const [confirmationFilter, setConfirmationFilter] = useState("all");
+  const matches = (r: SignupQueue["requests"][number]) =>
+    `${r.name} ${r.email}`.toLowerCase().includes(query.trim().toLowerCase());
+  const pending =
+      queue?.requests.filter(
+        (r) =>
+          r.status === "pending" &&
+          matches(r) &&
+          (confirmationFilter === "all" ||
+            r.emailConfirmed === (confirmationFilter === "confirmed")),
+      ) ?? [],
+    history =
+      queue?.requests.filter((r) => r.status !== "pending" && matches(r)) ?? [];
   return (
     <section className="panel signup-review" aria-label="Signup requests">
       <div className="planning-heading">
@@ -61,7 +73,60 @@ export default function SignupRequests({
             {queue.pendingCount === 1 ? "" : "s"}. Refreshes automatically every
             30 seconds and when you return to this window.
           </p>
-          {!pending.length && <p>No pending requests.</p>}
+          <h4>Pending applicants</h4>
+          <p className="muted">
+            Names and emails appear below automatically. Searching is optional.
+          </p>
+          <details className="signup-filters">
+            <summary>Search or filter applicants</summary>
+            <div className="form-grid">
+              <label className="field">
+                <span>Search signup requests</span>
+                <input
+                  type="search"
+                  value={query}
+                  maxLength={160}
+                  placeholder="Name or email"
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Filter pending requests</span>
+                <select
+                  value={confirmationFilter}
+                  onChange={(e) => setConfirmationFilter(e.target.value)}
+                >
+                  <option value="all">All pending requests</option>
+                  <option value="confirmed">Email confirmed</option>
+                  <option value="unconfirmed">
+                    Waiting for email confirmation
+                  </option>
+                </select>
+              </label>
+            </div>
+            <p className="muted">
+              Search applies to the latest 100 loaded requests. The pending
+              count includes all requests.
+            </p>
+          </details>
+          {!pending.length && (
+            <p>
+              {query.trim() || confirmationFilter !== "all"
+                ? "No pending requests match your filters."
+                : "No pending requests."}
+            </p>
+          )}
+          {!queue.pendingCount &&
+            !query.trim() &&
+            confirmationFilter === "all" && (
+              <p className="muted">
+                New registrations using this agency's code appear here,
+                including accounts waiting for email confirmation. Accounts
+                created before signup requests were enabled do not appear
+                automatically; add an existing confirmed account through Members
+                &amp; roles.
+              </p>
+            )}
           {pending.map((r) => (
             <article className="signup-request" key={r.id}>
               <div>

@@ -101,6 +101,12 @@ export function selectedVenueText(selected: SelectedVenue) {
         quote_required: "Cần báo giá",
       }[v.price.kind],
     "Số lượng thuê: " + selected.quantity + " " + venueUnitLabels[v.price.unit],
+    "Ghi chú giá: " + v.price.notes,
+    ...(v.price.evidence
+      ? ["Bằng chứng giá tham khảo: " + v.price.evidence]
+      : []),
+    "Dịch vụ bao gồm: " +
+      (v.included.length ? v.included.join("; ") : "Cần xác nhận"),
     "Điều kiện: " + v.conditions.join("; "),
     "Nguồn: " + v.sources.map((s) => s.url).join(", "),
     "Chưa xác nhận tình trạng trống hoặc đặt chỗ.",

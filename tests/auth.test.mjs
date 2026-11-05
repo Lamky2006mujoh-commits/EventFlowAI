@@ -237,6 +237,34 @@ test("sign-out during a pending request cannot reopen protected workspace data",
   await assert.rejects(() => pending, SessionExpiredError);
   unsubscribe();
 });
+test("sign-out while decoding an error response cannot affect the next session", async () => {
+  const client = fakeClient();
+  let finishBody;
+  let bodyStarted;
+  const started = new Promise((resolve) => {
+    bodyStarted = resolve;
+  });
+  const response = new Response(null, { status: 403 });
+  response.json = () => {
+    bodyStarted();
+    return new Promise((resolve) => {
+      finishBody = resolve;
+    });
+  };
+  client.functions.invoke = async () => ({
+    data: null,
+    error: { context: response },
+  });
+  const api = createWorkspaceApi(client);
+  const unsubscribe = api.onSessionEnd(() => {});
+  const pending = api.load();
+  await started;
+  client.emit("SIGNED_OUT");
+  finishBody({ error: "A previous account's error" });
+  await assert.rejects(() => pending, SessionExpiredError);
+  unsubscribe();
+});
+
 test("signup explains the live project email-limit error without retrying or signing out", async () => {
   const client = fakeClient();
   let attempts = 0;
@@ -331,4 +359,15 @@ test("agency preflight rejects invalid codes or missing setup before any Auth si
     );
     assert.equal(client.calls.length, 0);
   }
+});
+
+test("unconfirmed mutation transport errors direct users to reload before retrying", async () => {
+  const client = fakeClient();
+  client.functions.invoke = async () => ({
+    data: null,
+    error: new Error("private transport details"),
+  });
+  const api = createWorkspaceApi(client);
+  await assert.rejects(() => api.save(brief), /may already have completed/);
+  await assert.rejects(() => api.load(), /Check your connection/);
 });

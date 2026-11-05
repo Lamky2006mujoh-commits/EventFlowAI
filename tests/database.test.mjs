@@ -536,6 +536,13 @@ test("PostgreSQL venue snapshots preserve manual content, other costs and immuta
       agenda: "Welcome",
       assumptions: "Pending",
       budget: baselineBudget(data.budget, data.attendees),
+      locationContext: {
+        source: "selected",
+        location:
+          s.selectedVenue.venue.name + ", " + s.selectedVenue.venue.address,
+        selectedVenueId: s.selectedVenue.venue.id,
+        briefVersion: 1,
+      },
     };
     await assert.rejects(
       () =>
@@ -548,6 +555,7 @@ test("PostgreSQL venue snapshots preserve manual content, other costs and immuta
       data: applyVenue(proposal, s.selectedVenue, data),
     });
     assert.equal(s.proposal.version, 1);
+    assert.deepEqual(s.proposal.data.locationContext, proposal.locationContext);
     const original = structuredClone(s.proposal);
     const selected = {
       venue: search.options[1],
@@ -575,6 +583,10 @@ test("PostgreSQL venue snapshots preserve manual content, other costs and immuta
       data: updated,
     });
     assert.equal(s.proposal.version, 2);
+    assert.deepEqual(
+      s.proposal.data.locationContext,
+      original.data.locationContext,
+    );
     assert.deepEqual(s.history[0], original);
     assert.equal(s.proposal.data.theme, "Manual theme");
     assert.equal(

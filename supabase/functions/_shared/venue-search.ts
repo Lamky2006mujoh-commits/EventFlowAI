@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { generateStructured, GenerationError } from "./gemini.ts";
+import {
+  generateStructured,
+  GenerationError,
+  geminiThinkingLevel,
+} from "./gemini.ts";
 import {
   venuePriceSchema,
   venueSearchSchema,
@@ -7,7 +11,55 @@ import {
   type VenueSearch,
 } from "./venues.ts";
 import type { BriefData } from "./contracts.ts";
+import { tavilyVenueSources } from "./tavily.ts";
+type VenueSearchOptions = {
+  apiKey: string;
+  model: string;
+  extractionModel?: string;
+  provider?: "tavily" | "google";
+  tavilyApiKey?: string;
+  fetcher?: typeof fetch;
+  sleep?: (ms: number) => Promise<void>;
+};
 const value = z.string().trim().min(1).max(1000);
+const groundedResponseSchema = z.object({
+  candidates: z
+    .array(
+      z.object({
+        finishReason: z.string().optional(),
+        content: z
+          .object({
+            parts: z.array(
+              z.object({
+                text: z.string().optional(),
+                thought: z.boolean().optional(),
+              }),
+            ),
+          })
+          .optional(),
+        groundingMetadata: z
+          .object({
+            groundingChunks: z
+              .array(
+                z.object({
+                  web: z
+                    .object({
+                      uri: z.string().optional(),
+                      title: z.string().optional(),
+                    })
+                    .optional(),
+                }),
+              )
+              .optional(),
+            searchEntryPoint: z
+              .object({ renderedContent: z.string().optional() })
+              .optional(),
+          })
+          .optional(),
+      }),
+    )
+    .min(1),
+});
 export const venueExtractionSchema = z.object({
   summary: z.string().max(2000),
   venues: z
@@ -30,7 +82,7 @@ const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 export async function searchVenues(
   brief: { version: number; data: BriefData },
   preferences: string,
-  options: { apiKey: string; model: string; fetcher?: typeof fetch },
+  options: VenueSearchOptions,
 ): Promise<VenueSearch> {
   if (
     !options.apiKey ||
@@ -42,6 +94,18 @@ export async function searchVenues(
     );
   const area = venueSearchArea(brief.data.venue),
     fetcher = options.fetcher ?? fetch;
+  if (options.provider === "tavily") {
+    const web = await tavilyVenueSources(
+      brief.data,
+      preferences,
+      options.tavilyApiKey ?? "",
+      fetcher,
+    );
+    return extractVenueResults(brief, web.report, web.sources, "", options);
+  }
+  const sleep =
+    options.sleep ??
+    ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
   let response: Response | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -91,32 +155,52 @@ export async function searchVenues(
             tools: [{ google_search: {} }],
             generationConfig: {
               maxOutputTokens: 6144,
-              ...(options.model === "gemini-3.5-flash"
-                ? { thinkingConfig: { thinkingLevel: "minimal" } }
+              ...(geminiThinkingLevel(options.model)
+                ? {
+                    thinkingConfig: {
+                      thinkingLevel: geminiThinkingLevel(options.model),
+                    },
+                  }
                 : {}),
             },
           }),
         },
       );
-      if (response.ok || !(response.status === 429 || response.status >= 500))
-        break;
+      if (!response.ok)
+        console.warn("venue_search_http_failure", {
+          stage: "grounding",
+          attempt: attempt + 1,
+          status: response.status,
+        });
+      // A second immediate request cannot fix absent grounding entitlement.
+      if (response.ok || response.status < 500) break;
     } catch {
       if (attempt === 1)
         throw new GenerationError(
           "Venue search timed out or could not connect. Please retry.",
         );
     }
+    if (attempt === 0) await sleep(500);
   }
   if (!response?.ok)
     throw new GenerationError(
       response?.status === 429
-        ? "Venue search quota/rate limit reached. Check Gemini quota or retry after the limit resets."
-        : response && response.status >= 500
-          ? "Venue search service is busy. Please retry later."
-          : "Web venue search was rejected. Check Gemini model and Google Search availability.",
+        ? "Google rejected venue search with HTTP 429. Check Google Search grounding quota as well as the model quota in AI Studio. If grounding allowance is 0, waiting or retrying will not enable it: configure GEMINI_VENUE_MODEL with a supported model that has grounding allowance, or enable the required service/billing in your Google project. Saved venue results are unchanged."
+        : response?.status === 404
+          ? "The configured venue-search model is unavailable to this Google project (HTTP 404). Google limits Gemini 2.5 access to existing users. Set GEMINI_VENUE_MODEL to an accessible model with Search grounding allowance; enabling paid services requires the project owner's decision."
+          : response && response.status >= 500
+            ? "Venue search service is busy. Please retry later."
+            : "Web venue search was rejected. Check Gemini model and Google Search availability.",
     );
-  const body = await response.json(),
-    candidate = body.candidates?.[0];
+  let providerResponse;
+  try {
+    providerResponse = groundedResponseSchema.parse(await response.json());
+  } catch {
+    throw new GenerationError(
+      "Venue search returned an invalid response. Please retry later. Your saved planning has not changed.",
+    );
+  }
+  const candidate = providerResponse.candidates[0];
   if (candidate?.finishReason !== "STOP")
     throw new GenerationError("Venue search was incomplete. Please retry.");
   const report =
@@ -135,7 +219,7 @@ export async function searchVenues(
         !sources.some((s) => s.url === uri)
       )
         sources.push({
-          title: String(chunk.web.title ?? "Source").slice(0, 500),
+          title: String(chunk.web?.title ?? "Source").slice(0, 500),
           url: uri,
         });
     } catch {}
@@ -144,6 +228,25 @@ export async function searchVenues(
     throw new GenerationError(
       "No web-backed venue sources were returned. Broaden the criteria and retry; unsourced venue prices will not be presented as quotes.",
     );
+  return extractVenueResults(
+    brief,
+    report,
+    sources,
+    String(
+      candidate.groundingMetadata?.searchEntryPoint?.renderedContent ?? "",
+    ).slice(0, 50000),
+    options,
+  );
+}
+
+async function extractVenueResults(
+  brief: { version: number; data: BriefData },
+  report: string,
+  sources: Array<{ title: string; url: string }>,
+  searchSuggestions: string,
+  options: VenueSearchOptions,
+): Promise<VenueSearch> {
+  const area = venueSearchArea(brief.data.venue);
   const extracted = await generateStructured(
     venueExtractionSchema,
     {
@@ -154,11 +257,13 @@ export async function searchVenues(
     },
     {
       ...options,
-      fetcher,
+      model: options.extractionModel ?? options.model,
+      fetcher: options.fetcher ?? fetch,
       maxAttempts: 1,
       timeoutMs: 55000,
-      thinkingLevel:
-        options.model === "gemini-3.5-flash" ? "minimal" : undefined,
+      thinkingLevel: geminiThinkingLevel(
+        options.extractionModel ?? options.model,
+      ),
     },
   );
   const venues = extracted.venues.flatMap((v) => {
@@ -198,9 +303,7 @@ export async function searchVenues(
     method: "web",
     options: venues,
     sources: sources.slice(0, 30),
-    searchSuggestions: String(
-      candidate.groundingMetadata?.searchEntryPoint?.renderedContent ?? "",
-    ).slice(0, 50000),
+    searchSuggestions,
     summary: extracted.summary,
   });
 }

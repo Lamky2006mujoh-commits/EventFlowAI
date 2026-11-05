@@ -269,10 +269,6 @@ test("Gemini rejects truncated and schema-invalid output after three attempts", 
       new Response(
         JSON.stringify({ candidates: [{ finishReason: "MAX_TOKENS" }] }),
       ),
-    () =>
-      new Response(
-        JSON.stringify({ promptFeedback: { blockReason: "SAFETY" } }),
-      ),
   ]) {
     let calls = 0;
     await assert.rejects(

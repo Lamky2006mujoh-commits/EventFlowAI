@@ -11,6 +11,10 @@ import {
   type ProposalData,
 } from "../../supabase/functions/_shared/planning";
 import type { Brief } from "../../supabase/functions/_shared/contracts";
+import {
+  proposalVenueContext,
+  proposalLocationMatches,
+} from "../../supabase/functions/_shared/proposal-context";
 const labels: Record<
   "title" | "objectives" | "audience" | "theme" | "agenda" | "assumptions",
   string
@@ -45,11 +49,20 @@ export default function PlanningPanel({
   const dirty =
     !!draft && JSON.stringify(draft) !== JSON.stringify(state?.proposal?.data);
   const stale = !!state && state.briefVersion !== brief.version;
+  const locationContext = proposalVenueContext(
+    brief,
+    state ?? { selectedVenue: null, venueSearch: null },
+  );
+  const locationMatches = proposalLocationMatches(
+    state?.proposal?.data.locationContext,
+    locationContext,
+  );
   const currentProposal =
     !!state?.proposal &&
     state.proposal.briefVersion === brief.version &&
     state.proposal.conceptId === state.selectedId &&
-    !stale;
+    !stale &&
+    locationMatches;
   useEffect(() => {
     onDirtyChange(dirty);
     const warn = (event: BeforeUnloadEvent) => {
@@ -189,10 +202,16 @@ export default function PlanningPanel({
             Using saved brief version {brief.version}. AI suggestions need human
             review.
           </p>
+          <p>
+            Proposal location: <strong>{locationContext.location}</strong> ·{" "}
+            {locationContext.source === "selected"
+              ? "Chosen search venue"
+              : "Location from your brief"}
+          </p>
         </div>
         <button
           className="button secondary"
-          disabled={busy}
+          disabled={busy || !!confirmation}
           onClick={() =>
             dirty
               ? ask(
@@ -221,7 +240,10 @@ export default function PlanningPanel({
         </p>
       )}
       {busy && (
-        <p role="status">Working… AI generation may take up to two minutes.</p>
+        <p role="status">
+          Working… AI requests may take up to three minutes. Please avoid
+          submitting the same request again.
+        </p>
       )}
       {confirmation && (
         <div
@@ -233,6 +255,7 @@ export default function PlanningPanel({
           <p>{confirmation.message}</p>
           <button
             className="button"
+            disabled={busy}
             onClick={() => {
               const fn = confirmation.action;
               setConfirmation(null);
@@ -243,6 +266,7 @@ export default function PlanningPanel({
           </button>
           <button
             className="button secondary"
+            disabled={busy}
             onClick={() => setConfirmation(null)}
           >
             Cancel
@@ -290,7 +314,7 @@ export default function PlanningPanel({
             });
           if (state.proposal || dirty)
             ask(
-              "Chọn địa điểm này sẽ cập nhật chi phí thuê và lưu phiên bản proposal mới nếu có. Nội dung đã lưu khác được giữ nguyên; chỉnh sửa chưa lưu sẽ bị bỏ.",
+              "Select this venue and update rental costs? Saved proposal text and history are retained. Regenerate the proposal afterward to adapt its content to the new venue and selected concept. Unsaved edits will be discarded.",
               select,
             );
           else select();
@@ -336,11 +360,29 @@ export default function PlanningPanel({
       {!!state?.concepts.length && (
         <button
           className="button"
-          disabled={busy || !state.selectedId || stale || !!confirmation}
+          disabled={
+            busy ||
+            !state.selectedId ||
+            stale ||
+            !!confirmation ||
+            locationContext.selectionRequired
+          }
           onClick={() => act("generateProposal")}
         >
           {state.proposal ? "Regenerate proposal" : "Generate proposal"}
         </button>
+      )}
+      {locationContext.selectionRequired && (
+        <p className="review-note" role="status">
+          Choose a venue from the search results before generating a proposal.
+          Search results alone do not choose a location.
+        </p>
+      )}
+      {state?.proposal && !locationMatches && (
+        <p className="review-note" role="status">
+          The venue changed. Regenerate the proposal to align its content with
+          the chosen location and concept. Saved versions remain in history.
+        </p>
       )}
       {state?.proposal && draft && (
         <div className="proposal-editor">
@@ -354,9 +396,9 @@ export default function PlanningPanel({
           </div>
           {!currentProposal && (
             <p className="review-note">
-              Saved proposal belongs to an earlier brief or concept. Generate a
-              current proposal to edit. Export includes the saved source
-              version.
+              Saved proposal belongs to an earlier brief, concept or venue.
+              Generate a current proposal to edit. Export includes the saved
+              source version.
             </p>
           )}
           <form

@@ -42,6 +42,8 @@ export function createWorkspaceApi(
   ) {
     const revision = sessionRevision;
     const { data, error } = await client.functions.invoke(endpoint, {
+      timeout:
+        endpoint === "planning" && body.action !== "load" ? 180000 : 30000,
       body:
         endpoint === "planning"
           ? planningRequestSchema.parse(body)
@@ -49,10 +51,13 @@ export function createWorkspaceApi(
     });
     if (revision !== sessionRevision) throw new SessionExpiredError();
     if (error) {
-      let message = "Request failed. Check your connection and try again.";
+      let message = ["load", "workspace", "signupQueue"].includes(body.action)
+        ? "Request failed. Check your connection and try again."
+        : "Could not confirm whether this change was saved. Refresh the workspace or reload planning before retrying; the request may already have completed.";
       if (error.context instanceof Response) {
         if (error.context.status === 401) throw new SessionExpiredError();
         const response = await error.context.json().catch(() => null);
+        if (revision !== sessionRevision) throw new SessionExpiredError();
         if (
           error.context.status === 403 &&
           [

@@ -15,16 +15,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm test
-      - run: npm run lint
-      - run: npm run check:functions
-      - run: npm run verify:edge
-      - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
-      - run: npm run test:e2e:onboarding
+      - run: npm run verify:sprint3
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: browser-test-results
+          name: sprint3-verification
           path: test-results/

@@ -1,4 +1,5 @@
 import { searchVenues } from "./venue-search.ts";
+import { venueSearchProvider } from "./tavily.ts";
 import {
   emptyPlanning,
   planningRequestSchema,
@@ -6,7 +7,13 @@ import {
 } from "./planning.ts";
 import { briefDataSchema } from "./contracts.ts";
 import { preparePlanning, PlanningError } from "./planning-service.ts";
-import { generateStructured, GenerationError } from "./gemini.ts";
+import {
+  generateStructured,
+  GenerationError,
+  readGeminiConfig,
+  geminiThinkingLevel,
+  readVenueConfig,
+} from "./gemini.ts";
 export function createPlanningHandler(
   createClient: typeof import("@supabase/supabase-js").createClient,
   env: (key: string) => string | undefined,
@@ -104,22 +111,26 @@ export function createPlanningHandler(
         input,
         state,
         { version: brief.version, data: briefDataSchema.parse(brief.data) },
-        (schema, data) =>
-          generateStructured(schema, data, {
-            apiKey: env("GEMINI_API_KEY") ?? "",
-            model: env("GEMINI_MODEL") ?? "",
-            timeoutMs: 60000,
+        (schema, data) => {
+          const config = readGeminiConfig(env);
+          return generateStructured(schema, data, {
+            ...config,
+            timeoutMs: 45000,
             maxAttempts: 2,
-            thinkingLevel:
-              env("GEMINI_MODEL") === "gemini-3.5-flash"
-                ? "minimal"
-                : undefined,
-          }),
-        (source, preferences) =>
-          searchVenues(source, preferences, {
-            apiKey: env("GEMINI_API_KEY") ?? "",
-            model: env("GEMINI_MODEL") ?? "",
-          }),
+            maxOutputTokens: input.action === "generateConcepts" ? 3072 : 6144,
+            thinkingLevel: geminiThinkingLevel(config.model),
+          });
+        },
+        (source, preferences) => {
+          const provider = venueSearchProvider(env);
+          return searchVenues(source, preferences, {
+            ...(provider === "google"
+              ? readVenueConfig(env)
+              : readGeminiConfig(env)),
+            provider,
+            tavilyApiKey: env("TAVILY_API_KEY"),
+          });
+        },
       );
       const { data, error } = await client.rpc("save_planning", {
         p_brief_id: input.briefId,

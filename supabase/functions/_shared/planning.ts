@@ -28,9 +28,17 @@ export const proposalDataSchema = z.object({
   assumptions: text,
   budget: budgetSchema.optional(),
   venue: selectedVenueSchema.optional(),
+  locationContext: z
+    .object({
+      source: z.enum(["selected", "brief"]),
+      location: z.string().trim().min(1).max(2002),
+      selectedVenueId: z.uuid().nullable(),
+      briefVersion: z.number().int().positive(),
+    })
+    .optional(),
 });
 export const generatedProposalSchema = proposalDataSchema
-  .omit({ venue: true })
+  .omit({ venue: true, locationContext: true })
   .extend({ budget: budgetSchema });
 export type ProposalData = z.infer<typeof proposalDataSchema>;
 export const proposalSchema = z.object({
@@ -100,6 +108,13 @@ export const emptyPlanning = (briefVersion: number): Planning => ({
   selectedVenue: null,
 });
 export function proposalText(proposal: z.infer<typeof proposalSchema>) {
+  const location = proposal.data.locationContext;
+  const venue = proposal.data.venue;
+  const venueChanged =
+    location &&
+    venue &&
+    (location.selectedVenueId !== venue.venue.id ||
+      location.location !== `${venue.venue.name}, ${venue.venue.address}`);
   return [
     proposal.data.title,
     "Status: " + proposal.status,
@@ -107,9 +122,19 @@ export function proposalText(proposal: z.infer<typeof proposalSchema>) {
     "Brief version: " + proposal.briefVersion,
     "Saved by: " + proposal.author,
     "Saved at: " + proposal.createdAt,
+    ...(venueChanged
+      ? [
+          "LOCATION REVIEW REQUIRED: the selected venue changed after narrative generation. Regenerate the proposal for the chosen venue and concept.",
+        ]
+      : []),
     ...Object.entries(proposal.data)
-      .filter(([k]) => !["title", "budget", "venue"].includes(k))
+      .filter(
+        ([k]) => !["title", "budget", "venue", "locationContext"].includes(k),
+      )
       .map(([k, v]) => "\n" + k.toUpperCase() + "\n" + v),
+    ...(proposal.data.locationContext
+      ? ["\nPROPOSAL LOCATION\n" + proposal.data.locationContext.location]
+      : []),
     ...(proposal.data.venue
       ? ["\n" + selectedVenueText(proposal.data.venue)]
       : []),

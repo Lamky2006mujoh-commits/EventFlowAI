@@ -13,6 +13,8 @@ const money = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 const suggestionPrefix = `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https://www.google.com data:; base-uri 'none'; form-action 'none';"><base target="_blank">`;
+const validQuantity = (quantity: number) =>
+  Number.isInteger(quantity) && quantity >= 1 && quantity <= 100000;
 export default function VenuePicker({
   brief,
   search,
@@ -35,6 +37,9 @@ export default function VenuePicker({
     stale = search?.briefVersion !== brief.version;
   const quantityFor = (v: VenueSearch["options"][number]) =>
     quantities[v.id] ??
+    (selected?.venue.id === v.id && selected.briefVersion === brief.version
+      ? selected.quantity
+      : undefined) ??
     (v.price.unit === "person"
       ? brief.data.attendees
       : v.price.unit === "hour"
@@ -46,6 +51,7 @@ export default function VenuePicker({
         !fitOnly ||
         ((v.capacity === null || v.capacity >= brief.data.attendees) &&
           (v.price.max === null ||
+            !validQuantity(quantityFor(v)) ||
             v.price.max * quantityFor(v) <= brief.data.budget)),
     ) ?? [];
   return (
@@ -142,7 +148,9 @@ export default function VenuePicker({
                   selected.quantity === quantity &&
                   selected.briefVersion === brief.version;
               const total =
-                v.price.max === null ? null : v.price.max * quantity;
+                v.price.max === null || !validQuantity(quantity)
+                  ? null
+                  : v.price.max * quantity;
               return (
                 <article
                   className={"venue-card " + (chosen ? "chosen" : "")}
@@ -244,20 +252,22 @@ export default function VenuePicker({
                         min={1}
                         max={100000}
                         step={1}
-                        value={quantity}
+                        value={Number.isNaN(quantity) ? "" : quantity}
                         disabled={busy || stale}
                         onChange={(e) =>
                           setQuantities({
                             ...quantities,
-                            [v.id]: e.target.valueAsNumber || 1,
+                            [v.id]: e.target.valueAsNumber,
                           })
                         }
                       />
                     </label>
                     <p>
-                      {total === null
-                        ? "Sẽ giữ khoản dự trù trong ngân sách, chờ báo giá."
-                        : "Dự trù theo mức cao: " + money(total)}
+                      {!validQuantity(quantity)
+                        ? "Nhập số lượng nguyên từ 1 đến 100.000 trước khi chọn."
+                        : total === null
+                          ? "Sẽ giữ khoản dự trù trong ngân sách, chờ báo giá."
+                          : "Dự trù theo mức cao: " + money(total)}
                     </p>
                     {total !== null && total > brief.data.budget && (
                       <p className="error">
@@ -268,11 +278,7 @@ export default function VenuePicker({
                       type="button"
                       className="button secondary"
                       disabled={
-                        busy ||
-                        stale ||
-                        chosen ||
-                        quantity < 1 ||
-                        quantity > 100000
+                        busy || stale || chosen || !validQuantity(quantity)
                       }
                       onClick={() => onSelect(v.id, quantity)}
                     >
