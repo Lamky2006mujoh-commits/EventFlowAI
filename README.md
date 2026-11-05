@@ -49,6 +49,8 @@ Updated Sprint 2 backlog reflecting the implemented fixes: [read the document](d
 - **S2-T01:** Shared Zod request/data/response contracts, automated tests, and GitHub CI.
 - **P1 extras:** Readiness checks and administrator member/role management.
 
+Sprint 3 planning and carried-over work: [read the backlog](docs/SPRINT3_BACKLOG.md). The email-completion assumption is explicitly labeled; actual delivery verification remains pending.
+
 ## Sprint 3 features
 
 - **US-04:** Gemini concepts through an authenticated Edge Function; 2–3 structured concepts, Zod validation, bounded retries and controlled errors.

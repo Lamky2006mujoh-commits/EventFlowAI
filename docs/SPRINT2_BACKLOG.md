@@ -4,7 +4,7 @@ Updated: **5 November 2026**. Implementation baseline: commit [8305ac5](https://
 
 Sprint 2 establishes authentication, agency access control, and client brief management with version history. This update records the implemented improvements to authentication errors, Supabase configuration, session handling, data isolation tests, and brief change tracking.
 
-**Status interpretation:** “Technically complete” means implementation and test evidence are available. The registration flow is not fully closed because confirmation-email delivery remains deferred at the user's request. No Product Owner acceptance has been recorded in the available evidence.
+**Status interpretation:** “Technically complete” means implementation and test evidence are available. The registration flow is not fully closed because confirmation-email delivery remains unverified. This follow-up is now planned in Sprint 3 as S3-BUG-01. No Product Owner acceptance has been recorded in the available evidence.
 
 ## Backlog Summary
 
@@ -17,7 +17,7 @@ Sprint 2 establishes authentication, agency access control, and client brief man
 | S2-T01    | Shared contracts, regression tests, and CI          | Technically complete; check remote CI results for each commit                                                  |
 | S2-P1-01  | Agency member and role management                   | Technically complete                                                                                           |
 | S2-P1-02  | Brief readiness and usability improvements          | Technically complete                                                                                           |
-| S2-BUG-01 | Confirmation-email delivery and rate-limit incident | Unresolved; deferred at the user's request                                                                     |
+| S2-BUG-01 | Confirmation-email delivery and rate-limit incident | Carried over to S3-BUG-01; actual delivery verification pending                                                |
 
 S2-P1-01, S2-P1-02, and S2-BUG-01 are supplemental identifiers introduced in this backlog update. Estimates, assignees, and approvals have not been inferred.
 
@@ -147,11 +147,13 @@ The interface provides before/after brief comparisons and layouts suitable for s
 
 **Implemented handling:** distinguish error codes, provide actionable guidance, preserve form input after errors, avoid automatic email resends, and document configuration and connection checks.
 
-**Still unresolved:** provider delivery configuration or capacity, actual email receipt, and the complete confirmation flow. SMTP, quotas, and email-confirmation requirements have not been changed to claim resolution. The incident remains deferred at the user's request.
+**Still unresolved:** provider delivery configuration or capacity, actual email receipt, and the complete confirmation flow. SMTP, quotas, and email-confirmation requirements have not been changed to claim resolution. The incident is carried over to S3-BUG-01 in [Sprint 3 planning](SPRINT3_BACKLOG.md). Its Done label there is an explicit planning assumption, not a verified fix.
 
 **Closure criteria:** coordinate one agreed test account and record the project, attempt time, provider response, email receipt time, and confirmation/login outcome. Do not repeatedly register or resend. After successful acceptance, update this issue and the outstanding verification under US-20.
 
 ## Sprint 3 Boundary and References
+
+Open email-delivery acceptance and remote CI follow-up are tracked in the [Sprint 3 backlog](SPRINT3_BACKLOG.md). Existing Sprint 2 test evidence is unchanged.
 
 Concept generation and selection, proposals, TXT export, itemized proposal budgets, and venue search/selection with rental prices and conditions belong to Sprint 3. Gemini quota is separate from the Sprint 2 Auth email incident.
 
